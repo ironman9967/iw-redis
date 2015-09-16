@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"sourceMap": true
+	},
+	"files": [
+		"./src/index.ts",
+		"./src/sal-redis.d.ts",
+		"./src/sal-redis/IRedisServer.ts",
+		"./src/sal-redis/ISalRedisOpts.ts",
+		"./src/sal-redis/ISet.ts",
+		"./src/sal-redis/SalRedis.test.ts",
+		"./src/sal-redis/SalRedis.ts",
+		"./src/typings/master.d.ts",
+		"./src/typings/tsd/chai/chai.d.ts",
+		"./src/typings/tsd/mocha/mocha.d.ts",
+		"./src/typings/tsd/tsd.d.ts"
+	]
+}
