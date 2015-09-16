@@ -147,6 +147,7 @@ var SalRedis = (function (_super) {
             memo.push({
                 hostname: service.credentials.hostname,
                 port: service.credentials.port,
+                //TODO: ask josh
                 password: service.credentials.route
             });
             return memo;
