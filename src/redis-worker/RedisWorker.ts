@@ -15,22 +15,22 @@ import IWorker = ironworks.workers.IWorker;
 import IRedisServer = require('./IRedisServer');
 import ISet = require('./ISet');
 
-import ISalRedisOpts = require('./ISalRedisOpts');
+import IRedisWorkerOpts = require('./IRedisWorkerOpts');
 
-class SalRedis extends Worker implements IWorker {
+class RedisWorker extends Worker implements IWorker {
     public redisServer: IRedisServer;
     public client: redis.RedisClient;
 
-    constructor(opts?: ISalRedisOpts) {
+    constructor(opts?: IRedisWorkerOpts) {
         super([], {
             id: idHelper.newId(),
-            name: 'sal-redis'
+            name: 'redis-worker'
         });
-        var defOpts: ISalRedisOpts = {
+        var defOpts: IRedisWorkerOpts = {
             vcapServices: 'VCAP_SERVICES',
             redisProp: 'p-redis'
         };
-        this.opts = this.opts.beAdoptedBy<ISalRedisOpts>(defOpts, 'worker');
+        this.opts = this.opts.beAdoptedBy<IRedisWorkerOpts>(defOpts, 'worker');
         this.opts.merge(opts);
     }
 
@@ -67,13 +67,13 @@ class SalRedis extends Worker implements IWorker {
 
         this.respond("get",(key,cb) => {
             this.client.get(key,function(err,results){
-                SalRedis.parseResponseResults(cb,err,results);
+                RedisWorker.parseResponseResults(cb,err,results);
             });
         });
 
         this.respond("del",(key,cb) => {
             this.client.del(key,function(err,results){
-                SalRedis.parseResponseResults(cb,err,results);
+                RedisWorker.parseResponseResults(cb,err,results);
             });
         });
         this.verify<string>('del-pattern', (pattern, cb) => {
@@ -95,31 +95,31 @@ class SalRedis extends Worker implements IWorker {
 
         this.respond<ISet,any>("hmset",(data:ISet,cb) => {
             this.client.hmset(data.key,data.value,function(err,results){
-                SalRedis.parseResponseResults(cb,err,results);
+                RedisWorker.parseResponseResults(cb,err,results);
             });
         });
 
         this.respond<string,any>("hgetall",(key:string,cb) => {
             this.client.hgetall(key,function(err,results){
-                SalRedis.parseResponseResults(cb,err,results);
+                RedisWorker.parseResponseResults(cb,err,results);
             });
         });
 
         this.respond("sadd", (data: ISet, cb) => {
             this.client.sadd(data.key, data.value, (err, results) => {
-                SalRedis.parseResponseResults(cb, err, results);
+                RedisWorker.parseResponseResults(cb, err, results);
             });
         });
 
         this.respond("smembers", (key: string, cb) => {
             this.client.smembers(key, (err, results) => {
-                SalRedis.parseResponseResults(cb, err, results);
+                RedisWorker.parseResponseResults(cb, err, results);
             });
         });
 
         this.respond("srem", (data: ISet, cb) => {
             this.client.srem(data.key, data.value, (err, results) => {
-                SalRedis.parseResponseResults(cb, err, results);
+                RedisWorker.parseResponseResults(cb, err, results);
             });
         });
 
@@ -188,4 +188,4 @@ class SalRedis extends Worker implements IWorker {
     }
 }
 
-export = SalRedis;
+export = RedisWorker;

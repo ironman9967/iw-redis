@@ -1,5 +1,5 @@
 {
-  "name": "sal-redis",
+  "name": "redis-worker",
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://oses.homedepot.com/thdsal/sal-redis"
+    "url": "https://oses.homedepot.com/thdsal/iw-redis-worker"
   },
   "author": "Tyson Hester",
   "license": "ISC",
   "bugs": {
-    "url": "https://oses.homedepot.com/thdsal/sal-redis/issues"
+    "url": "https://oses.homedepot.com/thdsal/iw-redis-worker/issues"
   },
-  "homepage": "https://oses.homedepot.com/thdsal/sal-redis#readme",
+  "homepage": "https://oses.homedepot.com/thdsal/iw-redis-worker#readme",
   "devDependencies": {
     "chai": "^3.2.0",
     "findit": "^2.0.0",

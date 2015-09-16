@@ -1,5 +1,5 @@
 
-declare module "sal-redis" {
+declare module "redis-worker" {
 
     export interface IRedisServer {
         hostname: string;
@@ -12,13 +12,13 @@ declare module "sal-redis" {
         value: string|any;
     }
 
-    export interface ISalRedisOpts {
+    export interface IRedisWorkerOpts {
         vcapServices?: string;
         redisProp?: string;
     }
 
-    export class SalRedis {
-        constructor(opts?: ISalRedisOpts);
+    export class RedisWorker {
+        constructor(opts?: IRedisWorkerOpts);
     }
 
 }

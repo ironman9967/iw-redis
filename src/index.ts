@@ -1,6 +1,6 @@
 
-import SalRedis = require('./sal-redis/SalRedis');
+import RedisWorker = require('./redis-worker/RedisWorker');
 
 export = {
-    SalRedis: SalRedis
+    RedisWorker: RedisWorker
 }
