@@ -170,9 +170,7 @@ class RedisWorker extends Worker implements IWorker {
             memo.push(<IRedisServer>{
                 hostname: service.credentials.hostname,
                 port: service.credentials.port,
-
-                //TODO: ask josh
-                password: service.credentials.route
+                password: service.credentials.password
             });
             return memo;
         },[]));
