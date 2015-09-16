@@ -145,7 +145,7 @@ var RedisWorker = (function (_super) {
         var services = JSON.parse(process.env[this.opts.get('vcapServices')]);
         this.redisServer = _.first(_.reduce(services[this.opts.get('redisProp')], function (memo, service) {
             memo.push({
-                hostname: service.credentials.hostname,
+                hostname: service.credentials.host,
                 port: service.credentials.port,
                 password: service.credentials.password
             });

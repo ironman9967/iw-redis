@@ -168,7 +168,7 @@ class RedisWorker extends Worker implements IWorker {
         var services = JSON.parse(process.env[this.opts.get<string>('vcapServices')]);
         this.redisServer = _.first(_.reduce(services[this.opts.get<string>('redisProp')], (memo:IRedisServer[], service) => {
             memo.push(<IRedisServer>{
-                hostname: service.credentials.hostname,
+                hostname: service.credentials.host,
                 port: service.credentials.port,
                 password: service.credentials.password
             });
