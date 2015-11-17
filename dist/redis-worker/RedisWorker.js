@@ -17,7 +17,7 @@ var RedisWorker = (function (_super) {
         _super.call(this, [], {
             id: idHelper.newId(),
             name: 'redis-worker'
-        });
+        }, opts);
         var defOpts = {
             vcapServices: 'VCAP_SERVICES',
             redisProp: 'p-redis'
@@ -39,9 +39,8 @@ var RedisWorker = (function (_super) {
             }
         });
     };
-    RedisWorker.prototype.init = function (comm, whoService, callback) {
+    RedisWorker.prototype.init = function (callback) {
         var _this = this;
-        this.setComm(comm, whoService);
         this.getRedisCloudService();
         this.info("set", function (info) {
             _this.redisSet(info);
@@ -107,11 +106,16 @@ var RedisWorker = (function (_super) {
                 cb(e, keys);
             });
         });
-        this.connect(function (err) {
+        this.connect(function (e) {
             if (!_.isUndefined(callback)) {
-                callback(err);
+                callback(e);
+            }
+            else {
+                throw e;
             }
         });
+        _super.prototype.init.call(this);
+        return this;
     };
     RedisWorker.parseResponseResults = function (cb, err, results) {
         if (err) {

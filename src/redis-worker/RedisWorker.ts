@@ -25,7 +25,7 @@ class RedisWorker extends Worker implements IWorker {
         super([], {
             id: idHelper.newId(),
             name: 'redis-worker'
-        });
+        }, opts);
         var defOpts: IRedisWorkerOpts = {
             vcapServices: 'VCAP_SERVICES',
             redisProp: 'p-redis'
@@ -51,9 +51,7 @@ class RedisWorker extends Worker implements IWorker {
         });
     }
 
-    public init(comm, whoService, callback: (e: Error) => void) {
-        this.setComm(comm, whoService);
-
+    public init(callback?: (e: Error) => void): IWorker {
         this.getRedisCloudService();
 
         this.info<ISet>("set",(info:ISet) => {
@@ -129,11 +127,17 @@ class RedisWorker extends Worker implements IWorker {
             });
         });
 
-        this.connect(function(err){
+        this.connect(function(e){
             if (!_.isUndefined(callback)) {
-                callback(err);
+                callback(e);
+            }
+            else {
+                throw e;
             }
         });
+
+        super.init();
+        return this;
     }
 
     private static parseResponseResults(cb, err, results) {
