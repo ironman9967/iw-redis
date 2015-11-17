@@ -1,6 +1,11 @@
 
 declare module "redis-worker" {
 
+    import ironworks = require('ironworks');
+
+    import Worker = ironworks.workers.Worker;
+    import IWorker = ironworks.workers.IWorker;
+
     export interface IRedisServer {
         hostname: string;
         port: string;
@@ -17,7 +22,7 @@ declare module "redis-worker" {
         redisProp?: string;
     }
 
-    export class RedisWorker {
+    export class RedisWorker extends Worker implements IWorker {
         constructor(opts?: IRedisWorkerOpts);
     }
 
