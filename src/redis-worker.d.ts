@@ -5,6 +5,7 @@ declare module "redis-worker" {
 
     import Worker = ironworks.workers.Worker;
     import IWorker = ironworks.workers.IWorker;
+    import IWorkerChildOpts = ironworks.options.IWorkerChildOpts;
 
     export interface IRedisServer {
         hostname: string;
@@ -17,7 +18,7 @@ declare module "redis-worker" {
         value: string|any;
     }
 
-    export interface IRedisWorkerOpts {
+    export interface IRedisWorkerOpts extends IWorkerChildOpts {
         vcapServices?: string;
         redisProp?: string;
     }
