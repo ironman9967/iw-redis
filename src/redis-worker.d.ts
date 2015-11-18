@@ -18,10 +18,7 @@ declare module "redis-worker" {
         value: string|any;
     }
 
-    export interface IRedisWorkerOpts extends IWorkerChildOpts {
-        vcapServices?: string;
-        redisProp?: string;
-    }
+    export interface IRedisWorkerOpts extends IWorkerChildOpts {}
 
     export class RedisWorker extends Worker implements IWorker {
         constructor(opts?: IRedisWorkerOpts);

@@ -16,12 +16,9 @@ var RedisWorker = (function (_super) {
     function RedisWorker(opts) {
         _super.call(this, [], {
             id: idHelper.newId(),
-            name: 'redis-worker'
+            name: 'iw-redis'
         }, opts);
-        var defOpts = {
-            vcapServices: 'VCAP_SERVICES',
-            redisProp: 'p-redis'
-        };
+        var defOpts = {};
         this.opts = this.opts.beAdoptedBy(defOpts, 'worker');
         this.opts.merge(opts);
     }
@@ -41,7 +38,6 @@ var RedisWorker = (function (_super) {
     };
     RedisWorker.prototype.init = function (callback) {
         var _this = this;
-        this.getRedisCloudService();
         this.info("set", function (info) {
             _this.redisSet(info);
         });
@@ -106,15 +102,21 @@ var RedisWorker = (function (_super) {
                 cb(e, keys);
             });
         });
-        this.connect(function (e) {
-            if (!_.isUndefined(callback)) {
+        this.getRedisCloudService(function (e) {
+            if (e !== null && !_.isUndefined(callback)) {
                 callback(e);
             }
             else {
-                throw e;
+                _this.connect(function (e) {
+                    if (e !== null && !_.isUndefined(callback)) {
+                        callback(e);
+                    }
+                    else {
+                        _super.prototype.init.call(_this, callback);
+                    }
+                });
             }
         });
-        _super.prototype.init.call(this);
         return this;
     };
     RedisWorker.parseResponseResults = function (cb, err, results) {
@@ -145,16 +147,42 @@ var RedisWorker = (function (_super) {
             cb(null);
         }
     };
-    RedisWorker.prototype.getRedisCloudService = function () {
-        var services = JSON.parse(process.env[this.opts.get('vcapServices')]);
-        this.redisServer = _.first(_.reduce(services[this.opts.get('redisProp')], function (memo, service) {
-            memo.push({
-                hostname: service.credentials.host,
-                port: service.credentials.port,
-                password: service.credentials.password
+    RedisWorker.prototype.getRedisCloudService = function (cb) {
+        var _this = this;
+        var envEvts = _.reduce(this.allCommListeners(), function (envWorkers, l) {
+            if (l.commEvent.worker.indexOf('iw-env') === 0 && l.commEvent.name === 'list-generic-connections') {
+                envWorkers.push(l.commEvent);
+            }
+            return envWorkers;
+        }, []);
+        var redisConns = [];
+        async.whilst(function () {
+            return envEvts.length > 0;
+        }, function (cb) {
+            var envEvt = envEvts.pop();
+            _this.ask(envEvt, function (e, genConn) {
+                redisConns = redisConns.concat(_.filter(genConn, function (gc) {
+                    return gc.type === 'redis';
+                }));
+                cb(null);
             });
-            return memo;
-        }, []));
+        }, function (e) {
+            if (e !== null) {
+                cb(e);
+            }
+            else if (redisConns.length === 0) {
+                cb(new Error('no redis connection found'));
+            }
+            else {
+                var c = redisConns[0];
+                _this.redisServer = {
+                    hostname: c.host,
+                    port: c.port,
+                    password: c.password
+                };
+                cb(null);
+            }
+        });
     };
     RedisWorker.prototype.dispose = function (callback) {
         this.client.end();

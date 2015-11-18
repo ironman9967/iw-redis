@@ -11,6 +11,7 @@ import idHelper = ironworks.helpers.idHelper;
 
 import Worker = ironworks.workers.Worker;
 import IWorker = ironworks.workers.IWorker;
+import IGenericConnection = ironworks.workers.IGenericConnection;
 
 import IRedisServer = require('./IRedisServer');
 import ISet = require('./ISet');
@@ -24,21 +25,16 @@ class RedisWorker extends Worker implements IWorker {
     constructor(opts?: IRedisWorkerOpts) {
         super([], {
             id: idHelper.newId(),
-            name: 'redis-worker'
+            name: 'iw-redis'
         }, opts);
-        var defOpts: IRedisWorkerOpts = {
-            vcapServices: 'VCAP_SERVICES',
-            redisProp: 'p-redis'
-        };
+        var defOpts: IRedisWorkerOpts = {};
         this.opts = this.opts.beAdoptedBy<IRedisWorkerOpts>(defOpts, 'worker');
         this.opts.merge(opts);
     }
 
-
-
     private redisSet(info: ISet, cb?) {
         var stringData;
-        if(typeof info.value === "string"){
+        if(typeof info.value === "string") {
             stringData = info.value;
         }
         else {
@@ -52,8 +48,6 @@ class RedisWorker extends Worker implements IWorker {
     }
 
     public init(callback?: (e: Error) => void): IWorker {
-        this.getRedisCloudService();
-
         this.info<ISet>("set",(info:ISet) => {
             this.redisSet(info);
         });
@@ -127,16 +121,21 @@ class RedisWorker extends Worker implements IWorker {
             });
         });
 
-        this.connect(function(e){
-            if (!_.isUndefined(callback)) {
+        this.getRedisCloudService((e) => {
+            if (e !== null && !_.isUndefined(callback)) {
                 callback(e);
             }
             else {
-                throw e;
+                this.connect((e) => {
+                    if (e !== null && !_.isUndefined(callback)) {
+                        callback(e);
+                    }
+                    else {
+                        super.init(callback);
+                    }
+                });
             }
         });
-
-        super.init();
         return this;
     }
 
@@ -168,16 +167,45 @@ class RedisWorker extends Worker implements IWorker {
 
     }
 
-    private getRedisCloudService() {
-        var services = JSON.parse(process.env[this.opts.get<string>('vcapServices')]);
-        this.redisServer = _.first(_.reduce(services[this.opts.get<string>('redisProp')], (memo:IRedisServer[], service) => {
-            memo.push(<IRedisServer>{
-                hostname: service.credentials.host,
-                port: service.credentials.port,
-                password: service.credentials.password
-            });
-            return memo;
-        },[]));
+    private getRedisCloudService(cb: (e: Error) => void) {
+        var envEvts = _.reduce(this.allCommListeners(), (envWorkers, l) => {
+            if (l.commEvent.worker.indexOf('iw-env') === 0 && l.commEvent.name === 'list-generic-connections') {
+                envWorkers.push(l.commEvent);
+            }
+            return envWorkers;
+        }, []);
+        var redisConns = [];
+        async.whilst(
+            () => {
+                return envEvts.length > 0;
+            },
+            (cb) => {
+                var envEvt = envEvts.pop();
+                this.ask<IGenericConnection[]>(envEvt, (e, genConn) => {
+                    redisConns = redisConns.concat(_.filter(genConn, (gc) => {
+                        return gc.type === 'redis';
+                    }));
+                    cb(null);
+                });
+            },
+            (e) => {
+                if (e !== null) {
+                    cb(e);
+                }
+                else if (redisConns.length === 0) {
+                    cb(new Error('no redis connection found'));
+                }
+                else {
+                    var c = redisConns[0];
+                    this.redisServer = <IRedisServer>{
+                        hostname: c.host,
+                        port: c.port,
+                        password: c.password
+                    };
+                    cb(null);
+                }
+            }
+        );
     }
 
     public dispose(callback?: () => void) {
