@@ -30,7 +30,10 @@ describe('iw-redis', function () {
         }))
             .use(new RedisWorker());
         s.info('ready', function () {
-            done();
+            s.check('iw-redis.del-pattern', prefix + '*', function (e) {
+                expect(e).to.be.null;
+                done();
+            });
         });
         s.start();
     });
@@ -316,12 +319,140 @@ describe('iw-redis', function () {
             done();
         });
     });
-    afterEach(function (done) {
-        s.check('iw-redis.del-pattern', prefix + '*', function (e) {
+    it("should be able to push a value onto the left side of a list and provide a block right pop to retrieve the value", function (done) {
+        var listKey = prefix + 'lpush-brpop-test';
+        async.waterfall([
+            function (cb) {
+                s.request('iw-redis.lpush', {
+                    key: listKey,
+                    value: test
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            function (cb) {
+                s.request('iw-redis.brpop', {
+                    key: listKey
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKey);
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], function (e) {
             expect(e).to.be.null;
-            s.dispose(function () {
-                done();
-            });
+            done();
+        });
+    });
+    it("should be able to push a value onto the right side of a list and provide a block left pop to retrieve the value", function (done) {
+        var listKey = prefix + 'rpush-blpop-test';
+        async.waterfall([
+            function (cb) {
+                s.request('iw-redis.rpush', {
+                    key: listKey,
+                    value: test
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            function (cb) {
+                s.request('iw-redis.blpop', {
+                    key: listKey
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKey);
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], function (e) {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+    it("should timeout if blocking pop exceeds the given timeout in seconds", function (done) {
+        var listKey = prefix + 'rpush-blpop-test-timeout';
+        async.waterfall([
+            function (cb) {
+                s.request('iw-redis.blpop', {
+                    key: listKey,
+                    timeoutInSeconds: 1
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.null;
+                    expect(res.value).to.be.null;
+                    cb(e);
+                });
+            }
+        ], function (e) {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+    it("should return the first value added to any list if key is an array", function (done) {
+        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        async.waterfall([
+            function (cb) {
+                s.request('iw-redis.rpush', {
+                    key: listKeyPrefix + '1',
+                    value: test
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            function (cb) {
+                s.request('iw-redis.blpop', {
+                    key: [listKeyPrefix + '1', listKeyPrefix + '2']
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKeyPrefix + '1');
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], function (e) {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+    it("should return the first value added to any list if key is a csv", function (done) {
+        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        async.waterfall([
+            function (cb) {
+                s.request('iw-redis.rpush', {
+                    key: listKeyPrefix + '1',
+                    value: test
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            function (cb) {
+                s.request('iw-redis.blpop', {
+                    key: [listKeyPrefix + '1', listKeyPrefix + '2'].join(',')
+                }, function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKeyPrefix + '1');
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], function (e) {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+    afterEach(function (done) {
+        s.dispose(function () {
+            done();
         });
     });
 });

@@ -15,6 +15,8 @@ import IGenericConnection = ironworks.workers.IGenericConnection;
 
 import IRedisServer = require('./IRedisServer');
 import ISet = require('./ISet');
+import IBlock = require('./IBlock');
+import IListPop = require('./IListPop');
 
 import IRedisWorkerOpts = require('./IRedisWorkerOpts');
 
@@ -48,6 +50,12 @@ class RedisWorker extends Worker implements IWorker {
     }
 
     public init(callback?: (e: Error) => void): IWorker {
+        this.respond<string, string[]>('keys', (pattern, cb) => {
+            this.client.keys(pattern, (e, keys) => {
+                cb(e, keys);
+            });
+        });
+
         this.info<ISet>("set",(info:ISet) => {
             this.redisSet(info);
         });
@@ -59,13 +67,13 @@ class RedisWorker extends Worker implements IWorker {
 
         this.respond("get",(key,cb) => {
             this.client.get(key,function(err,results){
-                RedisWorker.parseResponseResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults(cb,err,results);
             });
         });
 
         this.respond("del",(key,cb) => {
             this.client.del(key,function(err,results){
-                RedisWorker.parseResponseResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults(cb,err,results);
             });
         });
         this.verify<string>('del-pattern', (pattern, cb) => {
@@ -87,37 +95,65 @@ class RedisWorker extends Worker implements IWorker {
 
         this.respond<ISet,any>("hmset",(data:ISet,cb) => {
             this.client.hmset(data.key,data.value,function(err,results){
-                RedisWorker.parseResponseResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults(cb,err,results);
             });
         });
 
         this.respond<string,any>("hgetall",(key:string,cb) => {
             this.client.hgetall(key,function(err,results){
-                RedisWorker.parseResponseResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults(cb,err,results);
             });
         });
 
         this.respond("sadd", (data: ISet, cb) => {
             this.client.sadd(data.key, data.value, (err, results) => {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
 
         this.respond("smembers", (key: string, cb) => {
             this.client.smembers(key, (err, results) => {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
 
         this.respond("srem", (data: ISet, cb) => {
             this.client.srem(data.key, data.value, (err, results) => {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
 
-        this.respond<string, string[]>('keys', (pattern, cb) => {
-            this.client.keys(pattern, (e, keys) => {
-                cb(e, keys);
+        this.respond<IBlock, IListPop>('brpop', (block, cb) => {
+            var timeout = RedisWorker.getBlockTimeout(block);
+            var args: any[] = RedisWorker.getListKeyArray(block.key);
+            this.client.brpop.apply(this.client, args.concat([
+                timeout,
+                (e, res) => {
+                    RedisWorker.parseListPopResults(cb, e, res);
+                }
+            ]));
+        });
+
+        this.respond<IBlock, IListPop>('blpop', (block, cb) => {
+            var timeout = RedisWorker.getBlockTimeout(block);
+            var args: any[] = RedisWorker.getListKeyArray(block.key);
+            this.client.blpop.apply(this.client, args.concat([
+                timeout,
+                (e, res) => {
+                    RedisWorker.parseListPopResults(cb, e, res);
+                }
+            ]));
+        });
+
+        this.respond<ISet, any>('lpush', (data, cb) => {
+            this.client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
+                RedisWorker.parseKeyValuePairResults(cb, e, res);
+            });
+        });
+
+        this.respond<ISet, any>('rpush', (data, cb) => {
+            this.client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
+                RedisWorker.parseKeyValuePairResults(cb, e, res);
             });
         });
 
@@ -139,11 +175,11 @@ class RedisWorker extends Worker implements IWorker {
         return this;
     }
 
-    private static parseResponseResults(cb, err, results) {
-        if(err){
-            cb(err);
+    private static parseKeyValuePairResults(cb, e, results) {
+        if (e !== null) {
+            cb(e);
         } else {
-            var err;
+            var err = null;
             var obj = results;
             try{
                 if(typeof obj === 'string' && obj.length > 0 && (obj[0]==='"' || obj[0]==='[' || obj[0]==='{'))
@@ -153,6 +189,46 @@ class RedisWorker extends Worker implements IWorker {
             }
             cb(err,obj);
         }
+    }
+
+    private static parseListPopResults(cb, e, results) {
+        if (e !== null) {
+            cb(e);
+        }
+        else if (results === null) {
+            cb(e, {
+                list: null,
+                value: null
+            })
+        }
+        else {
+            var listName = results.shift();
+            RedisWorker.parseKeyValuePairResults((e, obj) => {
+                if (e !== null) {
+                    cb(e);
+                }
+                else {
+                    cb(null, {
+                        list: listName,
+                        value: obj
+                    })
+                }
+            }, e, results.pop());
+        }
+    }
+
+    private static getBlockTimeout(block: IBlock): number {
+        return _.isUndefined(block.timeoutInSeconds) ? 0 : block.timeoutInSeconds;
+    }
+
+    private static getListKeyArray(key: string|string[]): string[] {
+        if (_.isArray(key)) {
+            return <string[]>key;
+        }
+        else if (_.contains(key, ',')) {
+            return (<string>key).split(',');
+        }
+        return [ <string>key ];
     }
 
     private connect(cb) {

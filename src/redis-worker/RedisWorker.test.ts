@@ -18,6 +18,8 @@ import EnvironmentWorker = ironworks.workers.EnvironmentWorker;
 import RedisWorker = require('./RedisWorker');
 
 import ISet = require('./ISet');
+import IBlock = require('./IBlock');
+import IListPop = require('./IListPop');
 
 var s: IService;
 var prefix = 'iw-redis-test.';
@@ -46,7 +48,10 @@ describe('iw-redis', () => {
             }))
             .use(new RedisWorker());
         s.info<IServiceReady>('ready', () => {
-            done();
+            s.check<string> ('iw-redis.del-pattern', prefix + '*', (e) => {
+                expect(e).to.be.null;
+                done();
+            });
         });
         s.start();
     });
@@ -343,12 +348,145 @@ describe('iw-redis', () => {
         });
     });
 
-    afterEach((done) => {
-        s.check<string> ('iw-redis.del-pattern', prefix + '*', (e) => {
+    it("should be able to push a value onto the left side of a list and provide a block right pop to retrieve the value", (done) => {
+        var listKey = prefix + 'lpush-brpop-test';
+        async.waterfall([
+            (cb) => {
+                s.request<ISet, any>('iw-redis.lpush', {
+                    key: listKey,
+                    value: test
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            (cb) => {
+                s.request<IBlock, IListPop> ('iw-redis.brpop', {
+                    key: listKey
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKey);
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], (e) => {
             expect(e).to.be.null;
-            s.dispose(() => {
-                done();
-            });
+            done();
+        });
+    });
+
+    it("should be able to push a value onto the right side of a list and provide a block left pop to retrieve the value", (done) => {
+        var listKey = prefix + 'rpush-blpop-test';
+        async.waterfall([
+            (cb) => {
+                s.request<ISet, any>('iw-redis.rpush', {
+                    key: listKey,
+                    value: test
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            (cb) => {
+                s.request<IBlock, IListPop>('iw-redis.blpop', {
+                    key: listKey
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKey);
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+
+    it("should timeout if blocking pop exceeds the given timeout in seconds", (done) => {
+        var listKey = prefix + 'rpush-blpop-test-timeout';
+        async.waterfall([
+            (cb) => {
+                s.request<IBlock, IListPop>('iw-redis.blpop', {
+                    key: listKey,
+                    timeoutInSeconds: 1
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.null;
+                    expect(res.value).to.be.null;
+                    cb(e);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+
+    it("should return the first value added to any list if key is an array", (done) => {
+        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        async.waterfall([
+            (cb) => {
+                s.request<ISet, any>('iw-redis.rpush', {
+                    key: listKeyPrefix + '1',
+                    value: test
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            (cb) => {
+                s.request<IBlock, IListPop>('iw-redis.blpop', {
+                    key: [ listKeyPrefix + '1', listKeyPrefix + '2' ]
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKeyPrefix + '1');
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+
+    it("should return the first value added to any list if key is a csv", (done) => {
+        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        async.waterfall([
+            (cb) => {
+                s.request<ISet, any>('iw-redis.rpush', {
+                    key: listKeyPrefix + '1',
+                    value: test
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(e);
+                });
+            },
+            (cb) => {
+                s.request<IBlock, IListPop>('iw-redis.blpop', {
+                    key: [ listKeyPrefix + '1', listKeyPrefix + '2' ].join(',')
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res.list).to.be.equal(listKeyPrefix + '1');
+                    expect(res.value.some).to.be.equal('data');
+                    cb(e);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+
+    afterEach((done) => {
+        s.dispose(() => {
+            done();
         });
     });
 });

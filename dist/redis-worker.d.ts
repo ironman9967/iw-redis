@@ -18,6 +18,16 @@ declare module "redis-worker" {
         value: string|any;
     }
 
+    export interface IBlock {
+        key: string|string[];
+        timeoutInSeconds?: number;
+    }
+
+    export interface IListPop {
+        list: string;
+        value: any;
+    }
+
     export interface IRedisWorkerOpts extends IWorkerChildOpts {}
 
     export class RedisWorker extends Worker implements IWorker {
