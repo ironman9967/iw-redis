@@ -38,6 +38,11 @@ var RedisWorker = (function (_super) {
     };
     RedisWorker.prototype.init = function (callback) {
         var _this = this;
+        this.respond('keys', function (pattern, cb) {
+            _this.client.keys(pattern, function (e, keys) {
+                cb(e, keys);
+            });
+        });
         this.info("set", function (info) {
             _this.redisSet(info);
         });
@@ -48,12 +53,12 @@ var RedisWorker = (function (_super) {
         });
         this.respond("get", function (key, cb) {
             _this.client.get(key, function (err, results) {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
         this.respond("del", function (key, cb) {
             _this.client.del(key, function (err, results) {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
         this.verify('del-pattern', function (pattern, cb) {
@@ -74,32 +79,57 @@ var RedisWorker = (function (_super) {
         });
         this.respond("hmset", function (data, cb) {
             _this.client.hmset(data.key, data.value, function (err, results) {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
         this.respond("hgetall", function (key, cb) {
             _this.client.hgetall(key, function (err, results) {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
         this.respond("sadd", function (data, cb) {
             _this.client.sadd(data.key, data.value, function (err, results) {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
         this.respond("smembers", function (key, cb) {
             _this.client.smembers(key, function (err, results) {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
         this.respond("srem", function (data, cb) {
             _this.client.srem(data.key, data.value, function (err, results) {
-                RedisWorker.parseResponseResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(cb, err, results);
             });
         });
-        this.respond('keys', function (pattern, cb) {
-            _this.client.keys(pattern, function (e, keys) {
-                cb(e, keys);
+        this.respond('brpop', function (block, cb) {
+            var timeout = RedisWorker.getBlockTimeout(block);
+            var args = RedisWorker.getListKeyArray(block.key);
+            _this.client.brpop.apply(_this.client, args.concat([
+                timeout,
+                function (e, res) {
+                    RedisWorker.parseListPopResults(cb, e, res);
+                }
+            ]));
+        });
+        this.respond('blpop', function (block, cb) {
+            var timeout = RedisWorker.getBlockTimeout(block);
+            var args = RedisWorker.getListKeyArray(block.key);
+            _this.client.blpop.apply(_this.client, args.concat([
+                timeout,
+                function (e, res) {
+                    RedisWorker.parseListPopResults(cb, e, res);
+                }
+            ]));
+        });
+        this.respond('lpush', function (data, cb) {
+            _this.client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
+                RedisWorker.parseKeyValuePairResults(cb, e, res);
+            });
+        });
+        this.respond('rpush', function (data, cb) {
+            _this.client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
+                RedisWorker.parseKeyValuePairResults(cb, e, res);
             });
         });
         this.getRedisCloudService(function (e) {
@@ -119,12 +149,12 @@ var RedisWorker = (function (_super) {
         });
         return this;
     };
-    RedisWorker.parseResponseResults = function (cb, err, results) {
-        if (err) {
-            cb(err);
+    RedisWorker.parseKeyValuePairResults = function (cb, e, results) {
+        if (e !== null) {
+            cb(e);
         }
         else {
-            var err;
+            var err = null;
             var obj = results;
             try {
                 if (typeof obj === 'string' && obj.length > 0 && (obj[0] === '"' || obj[0] === '[' || obj[0] === '{'))
@@ -135,6 +165,43 @@ var RedisWorker = (function (_super) {
             }
             cb(err, obj);
         }
+    };
+    RedisWorker.parseListPopResults = function (cb, e, results) {
+        if (e !== null) {
+            cb(e);
+        }
+        else if (results === null) {
+            cb(e, {
+                list: null,
+                value: null
+            });
+        }
+        else {
+            var listName = results.shift();
+            RedisWorker.parseKeyValuePairResults(function (e, obj) {
+                if (e !== null) {
+                    cb(e);
+                }
+                else {
+                    cb(null, {
+                        list: listName,
+                        value: obj
+                    });
+                }
+            }, e, results.pop());
+        }
+    };
+    RedisWorker.getBlockTimeout = function (block) {
+        return _.isUndefined(block.timeoutInSeconds) ? 0 : block.timeoutInSeconds;
+    };
+    RedisWorker.getListKeyArray = function (key) {
+        if (_.isArray(key)) {
+            return key;
+        }
+        else if (_.contains(key, ',')) {
+            return key.split(',');
+        }
+        return [key];
     };
     RedisWorker.prototype.connect = function (cb) {
         this.client = redis.createClient(this.redisServer.port, this.redisServer.hostname);
