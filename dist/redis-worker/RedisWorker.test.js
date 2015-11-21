@@ -9,7 +9,7 @@ var Service = ironworks.service.Service;
 var EnvironmentWorker = ironworks.workers.EnvironmentWorker;
 var RedisWorker = require('./RedisWorker');
 var s;
-var prefix = 'iw-redis-test|';
+var prefix = 'iw-redis-test-';
 var test = {
     some: 'data'
 };

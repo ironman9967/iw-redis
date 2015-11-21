@@ -25,7 +25,7 @@ import IPublish = require('./IPublish');
 import ISubscriptionMessage = require('./ISubscriptionMessage');
 
 var s: IService;
-var prefix = 'iw-redis-test|';
+var prefix = 'iw-redis-test-';
 interface ITest {
     some: string;
 }
