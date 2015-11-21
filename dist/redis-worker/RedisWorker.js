@@ -333,7 +333,9 @@ var RedisWorker = (function (_super) {
         }
     };
     RedisWorker.prototype.dispose = function (callback) {
-        this.client.end();
+        if (!_.isUndefined(this.client)) {
+            this.client.end();
+        }
         if (!_.isUndefined(this.subClient)) {
             this.subClient.removeAllListeners('message');
             this.subClient.end();

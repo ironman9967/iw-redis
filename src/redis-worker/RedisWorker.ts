@@ -373,7 +373,9 @@ class RedisWorker extends Worker implements IWorker {
     }
 
     public dispose(callback?: () => void) {
-        this.client.end();
+        if (!_.isUndefined(this.client)) {
+            this.client.end();
+        }
         if (!_.isUndefined(this.subClient)) {
             this.subClient.removeAllListeners('message');
             this.subClient.end();
