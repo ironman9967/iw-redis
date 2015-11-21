@@ -107,6 +107,14 @@ describe('iw-redis', () => {
         });
     });
 
+    it("should be return null when getting a redis key that isn't set", (done) => {
+        s.request<string, ITest> ('iw-redis.get', prefix + 'null-test', (e, res) => {
+            expect(e).to.be.null;
+            expect(res).to.be.equal(null);
+            done();
+        });
+    });
+
     it("should be able to delete a redis key", (done) => {
         async.waterfall([
             (cb) => {

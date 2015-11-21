@@ -245,6 +245,9 @@ class RedisWorker extends Worker implements IWorker {
                 cb(errorOrObj);
             }
             else {
+                if (typeof errorOrObj === 'string' && errorOrObj === 'null') {
+                    errorOrObj = null;
+                }
                 cb(null, errorOrObj);
             }
         }

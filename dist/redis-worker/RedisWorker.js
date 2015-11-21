@@ -214,6 +214,9 @@ var RedisWorker = (function (_super) {
                 cb(errorOrObj);
             }
             else {
+                if (typeof errorOrObj === 'string' && errorOrObj === 'null') {
+                    errorOrObj = null;
+                }
                 cb(null, errorOrObj);
             }
         }

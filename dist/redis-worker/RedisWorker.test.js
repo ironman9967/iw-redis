@@ -84,6 +84,13 @@ describe('iw-redis', function () {
             done();
         });
     });
+    it("should be return null when getting a redis key that isn't set", function (done) {
+        s.request('iw-redis.get', prefix + 'null-test', function (e, res) {
+            expect(e).to.be.null;
+            expect(res).to.be.equal(null);
+            done();
+        });
+    });
     it("should be able to delete a redis key", function (done) {
         async.waterfall([
             function (cb) {
