@@ -28,6 +28,11 @@ declare module "redis-worker" {
         value: any;
     }
 
+    export interface ISubscriptionMessage {
+        channel: string;
+        value: any;
+    }
+
     export interface IRedisWorkerOpts extends IWorkerChildOpts {}
 
     export class RedisWorker extends Worker implements IWorker {
