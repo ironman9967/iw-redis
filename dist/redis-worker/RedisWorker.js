@@ -53,12 +53,16 @@ var RedisWorker = (function (_super) {
         });
         this.respond("get", function (key, cb) {
             _this.client.get(key, function (err, results) {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, err, results);
             });
         });
         this.respond("del", function (key, cb) {
             _this.client.del(key, function (err, results) {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, err, results);
             });
         });
         this.verify('del-pattern', function (pattern, cb) {
@@ -79,58 +83,109 @@ var RedisWorker = (function (_super) {
         });
         this.respond("hmset", function (data, cb) {
             _this.client.hmset(data.key, data.value, function (err, results) {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, err, results);
             });
         });
         this.respond("hgetall", function (key, cb) {
             _this.client.hgetall(key, function (err, results) {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, err, results);
             });
         });
         this.respond("sadd", function (data, cb) {
             _this.client.sadd(data.key, data.value, function (err, results) {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, err, results);
             });
         });
         this.respond("smembers", function (key, cb) {
             _this.client.smembers(key, function (err, results) {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, err, results);
             });
         });
         this.respond("srem", function (data, cb) {
             _this.client.srem(data.key, data.value, function (err, results) {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, err, results);
             });
         });
         this.respond('brpop', function (block, cb) {
             var timeout = RedisWorker.getBlockTimeout(block);
-            var args = RedisWorker.getListKeyArray(block.key);
+            var args = RedisWorker.getKeyArray(block.key);
             _this.client.brpop.apply(_this.client, args.concat([
                 timeout,
                 function (e, res) {
-                    RedisWorker.parseListPopResults(cb, e, res);
+                    RedisWorker.parseListPopResults(function (e, res) {
+                        cb(e, res);
+                    }, e, res);
                 }
             ]));
         });
         this.respond('blpop', function (block, cb) {
             var timeout = RedisWorker.getBlockTimeout(block);
-            var args = RedisWorker.getListKeyArray(block.key);
+            var args = RedisWorker.getKeyArray(block.key);
             _this.client.blpop.apply(_this.client, args.concat([
                 timeout,
                 function (e, res) {
-                    RedisWorker.parseListPopResults(cb, e, res);
+                    RedisWorker.parseListPopResults(function (e, res) {
+                        cb(e, res);
+                    }, e, res);
                 }
             ]));
         });
         this.respond('lpush', function (data, cb) {
             _this.client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
-                RedisWorker.parseKeyValuePairResults(cb, e, res);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, e, res);
             });
         });
         this.respond('rpush', function (data, cb) {
             _this.client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
-                RedisWorker.parseKeyValuePairResults(cb, e, res);
+                RedisWorker.parseKeyValuePairResults(function (e, res) {
+                    cb(e, res);
+                }, e, res);
             });
+        });
+        this.respond('subscribe', function (channels, cb) {
+            _this.setSubClient();
+            var args = RedisWorker.getKeyArray(channels);
+            _this.subClient.subscribe.apply(_this.subClient, args.concat([function (e, res) {
+                    RedisWorker.parseKeyValuePairResults(function (e, res) {
+                        cb(e, res);
+                    }, e, res);
+                }]));
+        });
+        this.respond('publish', function (pub, cb) {
+            var client = redis.createClient(_this.redisServer.port, _this.redisServer.hostname);
+            var args = RedisWorker.getKeyArray(pub.channel);
+            args.push(JSON.stringify(pub.value));
+            client.publish.apply(client, args.concat([function (e, res) {
+                    RedisWorker.parseKeyValuePairResults(function (e, res) {
+                        client.end();
+                        cb(e, res);
+                    }, e, res);
+                }]));
+        });
+        this.respond('unsubscribe', function (channels, cb) {
+            if (_.isUndefined(_this.subClient)) {
+                cb(null);
+            }
+            else {
+                var args = RedisWorker.getKeyArray(channels);
+                _this.subClient.unsubscribe.apply(_this.subClient, args.concat([function (e, res) {
+                        RedisWorker.parseKeyValuePairResults(function (e, res) {
+                            cb(e, res);
+                        }, e, res);
+                    }]));
+            }
         });
         this.getRedisCloudService(function (e) {
             if (e !== null && !_.isUndefined(callback)) {
@@ -154,17 +209,27 @@ var RedisWorker = (function (_super) {
             cb(e);
         }
         else {
-            var err = null;
-            var obj = results;
-            try {
-                if (typeof obj === 'string' && obj.length > 0 && (obj[0] === '"' || obj[0] === '[' || obj[0] === '{'))
-                    obj = JSON.parse(results);
+            var errorOrObj = RedisWorker.parseJsonSafe(results);
+            if (errorOrObj instanceof Error) {
+                cb(errorOrObj);
             }
-            catch (e) {
-                err = e;
+            else {
+                if (typeof errorOrObj === 'string' && errorOrObj === 'null') {
+                    errorOrObj = null;
+                }
+                cb(null, errorOrObj);
             }
-            cb(err, obj);
         }
+    };
+    RedisWorker.parseJsonSafe = function (obj) {
+        try {
+            if (typeof obj === 'string' && obj.length > 0 && (obj[0] === '"' || obj[0] === '[' || obj[0] === '{'))
+                obj = JSON.parse(obj);
+        }
+        catch (e) {
+            return e;
+        }
+        return obj;
     };
     RedisWorker.parseListPopResults = function (cb, e, results) {
         if (e !== null) {
@@ -194,7 +259,7 @@ var RedisWorker = (function (_super) {
     RedisWorker.getBlockTimeout = function (block) {
         return _.isUndefined(block.timeoutInSeconds) ? 0 : block.timeoutInSeconds;
     };
-    RedisWorker.getListKeyArray = function (key) {
+    RedisWorker.getKeyArray = function (key) {
         if (_.isArray(key)) {
             return key;
         }
@@ -251,8 +316,33 @@ var RedisWorker = (function (_super) {
             }
         });
     };
+    RedisWorker.prototype.setSubClient = function () {
+        var _this = this;
+        if (_.isUndefined(this.subClient)) {
+            this.subClient = redis.createClient(this.redisServer.port, this.redisServer.hostname);
+            this.subClient.on('message', function (channel, message) {
+                _this.inform('message-' + channel.replace(/\./g, '-'), RedisWorker.parseJsonSafe(message));
+                _this.inform('message', {
+                    channel: channel,
+                    value: RedisWorker.parseJsonSafe(message)
+                });
+            });
+            this.subClient.on('unsubscribe', function (channel, count) {
+                if (count === 0) {
+                    _this.subClient.end();
+                    _this.subClient = void 0;
+                }
+            });
+        }
+    };
     RedisWorker.prototype.dispose = function (callback) {
-        this.client.end();
+        if (!_.isUndefined(this.client)) {
+            this.client.end();
+        }
+        if (!_.isUndefined(this.subClient)) {
+            this.subClient.removeAllListeners('message');
+            this.subClient.end();
+        }
         if (!_.isUndefined(callback)) {
             process.nextTick(function () {
                 callback();

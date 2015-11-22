@@ -6,6 +6,7 @@ var expect = chai.expect;
 
 import async = require('async');
 import _ = require('lodash');
+import redis = require('redis');
 
 import ironworks = require('ironworks');
 import Service = ironworks.service.Service;
@@ -20,9 +21,11 @@ import RedisWorker = require('./RedisWorker');
 import ISet = require('./ISet');
 import IBlock = require('./IBlock');
 import IListPop = require('./IListPop');
+import IPublish = require('./IPublish');
+import ISubscriptionMessage = require('./ISubscriptionMessage');
 
 var s: IService;
-var prefix = 'iw-redis-test.';
+var prefix = 'iw-redis-test-';
 interface ITest {
     some: string;
 }
@@ -70,7 +73,7 @@ describe('iw-redis', () => {
             (cb) => {
                 s.request<string, ITest> ('iw-redis.get', prefix + 'set-test', (e, res) => {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -94,12 +97,20 @@ describe('iw-redis', () => {
             (cb) => {
                 s.request<string, ITest> ('iw-redis.get', prefix + 'set-test', (e, res) => {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
         ], (e) => {
             expect(e).to.be.null;
+            done();
+        });
+    });
+
+    it("should be return null when getting a redis key that isn't set", (done) => {
+        s.request<string, ITest> ('iw-redis.get', prefix + 'null-test', (e, res) => {
+            expect(e).to.be.null;
+            expect(res).to.be.equal(null);
             done();
         });
     });
@@ -189,7 +200,7 @@ describe('iw-redis', () => {
             (cb) => {
                 s.request<string, ITest> ('iw-redis.hgetall', prefix + 'set-test', (e, res) => {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -214,7 +225,7 @@ describe('iw-redis', () => {
             (cb) => {
                 s.request<string, ITest> ('iw-redis.hgetall', prefix + 'set-test', (e, res) => {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -241,7 +252,7 @@ describe('iw-redis', () => {
                     expect(e).to.be.null;
                     expect(res.length).to.be.equal(1);
                     var obj: ITest = JSON.parse(res[0]);
-                    expect(obj.some).to.be.equal('data');
+                    expect(obj.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -268,7 +279,7 @@ describe('iw-redis', () => {
                     expect(e).to.be.null;
                     expect(res.length).to.be.equal(1);
                     var obj: ITest = JSON.parse(res[0]);
-                    expect(obj.some).to.be.equal('data');
+                    expect(obj.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -352,7 +363,7 @@ describe('iw-redis', () => {
         var listKey = prefix + 'lpush-brpop-test';
         async.waterfall([
             (cb) => {
-                s.request<ISet, any>('iw-redis.lpush', {
+                s.request<ISet, number>('iw-redis.lpush', {
                     key: listKey,
                     value: test
                 }, (e, res) => {
@@ -367,7 +378,7 @@ describe('iw-redis', () => {
                 }, (e, res) => {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKey);
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -381,7 +392,7 @@ describe('iw-redis', () => {
         var listKey = prefix + 'rpush-blpop-test';
         async.waterfall([
             (cb) => {
-                s.request<ISet, any>('iw-redis.rpush', {
+                s.request<ISet, number>('iw-redis.rpush', {
                     key: listKey,
                     value: test
                 }, (e, res) => {
@@ -396,7 +407,7 @@ describe('iw-redis', () => {
                 }, (e, res) => {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKey);
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -427,10 +438,10 @@ describe('iw-redis', () => {
     });
 
     it("should return the first value added to any list if key is an array", (done) => {
-        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        var listKeyPrefix = prefix + 'multi-list-pop-test|';
         async.waterfall([
             (cb) => {
-                s.request<ISet, any>('iw-redis.rpush', {
+                s.request<ISet, number>('iw-redis.rpush', {
                     key: listKeyPrefix + '1',
                     value: test
                 }, (e, res) => {
@@ -445,7 +456,7 @@ describe('iw-redis', () => {
                 }, (e, res) => {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKeyPrefix + '1');
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -456,10 +467,10 @@ describe('iw-redis', () => {
     });
 
     it("should return the first value added to any list if key is a csv", (done) => {
-        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        var listKeyPrefix = prefix + 'multi-list-pop-test|';
         async.waterfall([
             (cb) => {
-                s.request<ISet, any>('iw-redis.rpush', {
+                s.request<ISet, number>('iw-redis.rpush', {
                     key: listKeyPrefix + '1',
                     value: test
                 }, (e, res) => {
@@ -474,13 +485,90 @@ describe('iw-redis', () => {
                 }, (e, res) => {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKeyPrefix + '1');
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
         ], (e) => {
             expect(e).to.be.null;
             done();
+        });
+    });
+
+    it("should inform the 'message-[channel name]' event when a subscribed channel receives a publish message", (done) => {
+        var channel = prefix + 'test-channel';
+        s.info<ITest>('iw-redis.message-' + channel, (data) => {
+            expect(data.some).to.be.equal(test.some);
+            done();
+        });
+        s.request<string|string[], string>('iw-redis.subscribe', channel, (e, channelName) => {
+            expect(e).to.be.null;
+            expect(channelName).to.be.equal(channel);
+            var anotherRedisClient = redis.createClient();
+            anotherRedisClient.publish(channel, JSON.stringify(test));
+        });
+    });
+
+    it("should inform the 'message' event when a subscribed channel receives a publish message", (done) => {
+        var channel = prefix + 'test-channel';
+        s.info<ISubscriptionMessage>('iw-redis.message', (data) => {
+            expect(data.channel).to.be.equal(channel);
+            expect(data.value.some).to.be.equal(test.some);
+            done();
+        });
+        s.request<string|string[], string>('iw-redis.subscribe', channel, (e, channelName) => {
+            expect(e).to.be.null;
+            expect(channelName).to.be.equal(channel);
+            var anotherRedisClient = redis.createClient();
+            anotherRedisClient.publish(channel, JSON.stringify(test));
+        });
+    });
+
+    it("should be able to publish to a channel", (done) => {
+        var channel = prefix + 'test-channel';
+        s.info<ITest>('iw-redis.message-' + channel, (data) => {
+            expect(data.some).to.be.equal(test.some);
+            done();
+        });
+        s.request<string|string[], string>('iw-redis.subscribe', channel, (e, channelName) => {
+            expect(e).to.be.null;
+            expect(channelName).to.be.equal(channel);
+        });
+        s.request<IPublish, string>('iw-redis.publish', {
+            channel: channel,
+            value: test
+        }, (e, subscriberCount) => {
+            expect(e).to.be.null;
+            expect(subscriberCount).to.be.equal(1);
+        });
+    });
+
+    it("should not inform the 'message-[channel name]' event if unsubscribed", (done) => {
+        var channel = prefix + 'test-channel';
+        s.info<ITest>('iw-redis.message-' + channel, (data) => {
+            throw new Error('event should not have been called once unsubscribed');
+        });
+        async.waterfall([
+            (cb) => {
+                s.request<string|string[], string>('iw-redis.subscribe', channel, (e, channelName) => {
+                    expect(e).to.be.null;
+                    expect(channelName).to.be.equal(channel);
+                    cb(null);
+                });
+            },
+            (cb) => {
+                s.request<string|string[], string>('iw-redis.unsubscribe', channel, (e, channelName) => {
+                    expect(e).to.be.null;
+                    expect(channelName).to.be.equal(channel);
+                    cb(null);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            var anotherRedisClient = redis.createClient();
+            anotherRedisClient.publish(channel, JSON.stringify(test), () => {
+                setTimeout(done, 100);
+            });
         });
     });
 

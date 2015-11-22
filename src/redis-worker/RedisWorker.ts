@@ -17,12 +17,15 @@ import IRedisServer = require('./IRedisServer');
 import ISet = require('./ISet');
 import IBlock = require('./IBlock');
 import IListPop = require('./IListPop');
+import IPublish = require('./IPublish');
+import ISubscriptionMessage = require('./ISubscriptionMessage');
 
 import IRedisWorkerOpts = require('./IRedisWorkerOpts');
 
 class RedisWorker extends Worker implements IWorker {
     public redisServer: IRedisServer;
     public client: redis.RedisClient;
+    public subClient: redis.RedisClient;
 
     constructor(opts?: IRedisWorkerOpts) {
         super([], {
@@ -67,13 +70,17 @@ class RedisWorker extends Worker implements IWorker {
 
         this.respond("get",(key,cb) => {
             this.client.get(key,function(err,results){
-                RedisWorker.parseKeyValuePairResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                },err,results);
             });
         });
 
         this.respond("del",(key,cb) => {
             this.client.del(key,function(err,results){
-                RedisWorker.parseKeyValuePairResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                },err,results);
             });
         });
         this.verify<string>('del-pattern', (pattern, cb) => {
@@ -95,66 +102,120 @@ class RedisWorker extends Worker implements IWorker {
 
         this.respond<ISet,any>("hmset",(data:ISet,cb) => {
             this.client.hmset(data.key,data.value,function(err,results){
-                RedisWorker.parseKeyValuePairResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                },err,results);
             });
         });
 
         this.respond<string,any>("hgetall",(key:string,cb) => {
             this.client.hgetall(key,function(err,results){
-                RedisWorker.parseKeyValuePairResults(cb,err,results);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                },err,results);
             });
         });
 
         this.respond("sadd", (data: ISet, cb) => {
             this.client.sadd(data.key, data.value, (err, results) => {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                }, err, results);
             });
         });
 
         this.respond("smembers", (key: string, cb) => {
             this.client.smembers(key, (err, results) => {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                }, err, results);
             });
         });
 
         this.respond("srem", (data: ISet, cb) => {
             this.client.srem(data.key, data.value, (err, results) => {
-                RedisWorker.parseKeyValuePairResults(cb, err, results);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                }, err, results);
             });
         });
 
         this.respond<IBlock, IListPop>('brpop', (block, cb) => {
             var timeout = RedisWorker.getBlockTimeout(block);
-            var args: any[] = RedisWorker.getListKeyArray(block.key);
+            var args: any[] = RedisWorker.getKeyArray(block.key);
             this.client.brpop.apply(this.client, args.concat([
                 timeout,
                 (e, res) => {
-                    RedisWorker.parseListPopResults(cb, e, res);
+                    RedisWorker.parseListPopResults((e, res) => {
+                        cb(e, res);
+                    }, e, res);
                 }
             ]));
         });
 
         this.respond<IBlock, IListPop>('blpop', (block, cb) => {
             var timeout = RedisWorker.getBlockTimeout(block);
-            var args: any[] = RedisWorker.getListKeyArray(block.key);
+            var args: any[] = RedisWorker.getKeyArray(block.key);
             this.client.blpop.apply(this.client, args.concat([
                 timeout,
                 (e, res) => {
-                    RedisWorker.parseListPopResults(cb, e, res);
+                    RedisWorker.parseListPopResults((e, res) => {
+                        cb(e, res);
+                    }, e, res);
                 }
             ]));
         });
 
         this.respond<ISet, any>('lpush', (data, cb) => {
             this.client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
-                RedisWorker.parseKeyValuePairResults(cb, e, res);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                }, e, res);
             });
         });
 
         this.respond<ISet, any>('rpush', (data, cb) => {
             this.client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
-                RedisWorker.parseKeyValuePairResults(cb, e, res);
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                }, e, res);
             });
+        });
+
+        this.respond<string|string[], string>('subscribe', (channels, cb) => {
+            this.setSubClient();
+            var args: any[] = RedisWorker.getKeyArray(channels);
+            this.subClient.subscribe.apply(this.subClient, args.concat([(e, res) => {
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    cb(e, res);
+                }, e, res);
+            }]));
+        });
+
+        this.respond<IPublish, number>('publish', (pub, cb) => {
+            var client = redis.createClient(this.redisServer.port,this.redisServer.hostname);
+            var args: any[] = RedisWorker.getKeyArray(pub.channel);
+            args.push(JSON.stringify(pub.value));
+            client.publish.apply(client, args.concat([(e, res) => {
+                RedisWorker.parseKeyValuePairResults((e, res) => {
+                    client.end();
+                    cb(e, res);
+                }, e, res);
+            }]));
+        });
+
+        this.respond<string|string[], string>('unsubscribe', (channels, cb) => {
+            if (_.isUndefined(this.subClient)) {
+                cb(null);
+            }
+            else {
+                var args: any[] = RedisWorker.getKeyArray(channels);
+                this.subClient.unsubscribe.apply(this.subClient, args.concat([(e, res) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, e, res);
+                }]));
+            }
         });
 
         this.getRedisCloudService((e) => {
@@ -179,16 +240,27 @@ class RedisWorker extends Worker implements IWorker {
         if (e !== null) {
             cb(e);
         } else {
-            var err = null;
-            var obj = results;
-            try{
-                if(typeof obj === 'string' && obj.length > 0 && (obj[0]==='"' || obj[0]==='[' || obj[0]==='{'))
-                    obj = JSON.parse(results);
-            }catch(e){
-                err=e;
+            var errorOrObj = RedisWorker.parseJsonSafe(results);
+            if (errorOrObj instanceof Error) {
+                cb(errorOrObj);
             }
-            cb(err,obj);
+            else {
+                if (typeof errorOrObj === 'string' && errorOrObj === 'null') {
+                    errorOrObj = null;
+                }
+                cb(null, errorOrObj);
+            }
         }
+    }
+
+    private static parseJsonSafe(obj): any {
+        try{
+            if(typeof obj === 'string' && obj.length > 0 && (obj[0]==='"' || obj[0]==='[' || obj[0]==='{'))
+                obj = JSON.parse(obj);
+        }catch(e){
+            return e;
+        }
+        return obj;
     }
 
     private static parseListPopResults(cb, e, results) {
@@ -221,7 +293,7 @@ class RedisWorker extends Worker implements IWorker {
         return _.isUndefined(block.timeoutInSeconds) ? 0 : block.timeoutInSeconds;
     }
 
-    private static getListKeyArray(key: string|string[]): string[] {
+    private static getKeyArray(key: string|string[]): string[] {
         if (_.isArray(key)) {
             return <string[]>key;
         }
@@ -284,8 +356,33 @@ class RedisWorker extends Worker implements IWorker {
         );
     }
 
+    private setSubClient() {
+        if (_.isUndefined(this.subClient)) {
+            this.subClient = redis.createClient(this.redisServer.port,this.redisServer.hostname);
+            this.subClient.on('message', (channel, message) => {
+                this.inform('message-' + channel.replace(/\./g, '-'), RedisWorker.parseJsonSafe(message));
+                this.inform<ISubscriptionMessage>('message', {
+                    channel: channel,
+                    value: RedisWorker.parseJsonSafe(message)
+                });
+            });
+            this.subClient.on('unsubscribe', (channel, count) => {
+                if (count === 0) {
+                    this.subClient.end();
+                    this.subClient = void 0;
+                }
+            });
+        }
+    }
+
     public dispose(callback?: () => void) {
-        this.client.end();
+        if (!_.isUndefined(this.client)) {
+            this.client.end();
+        }
+        if (!_.isUndefined(this.subClient)) {
+            this.subClient.removeAllListeners('message');
+            this.subClient.end();
+        }
         if (!_.isUndefined(callback)) {
             process.nextTick(() => {
                 callback();

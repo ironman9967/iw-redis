@@ -3,12 +3,13 @@ var chai = require('chai');
 var expect = chai.expect;
 var async = require('async');
 var _ = require('lodash');
+var redis = require('redis');
 var ironworks = require('ironworks');
 var Service = ironworks.service.Service;
 var EnvironmentWorker = ironworks.workers.EnvironmentWorker;
 var RedisWorker = require('./RedisWorker');
 var s;
-var prefix = 'iw-redis-test.';
+var prefix = 'iw-redis-test-';
 var test = {
     some: 'data'
 };
@@ -51,7 +52,7 @@ describe('iw-redis', function () {
             function (cb) {
                 s.request('iw-redis.get', prefix + 'set-test', function (e, res) {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -74,12 +75,19 @@ describe('iw-redis', function () {
             function (cb) {
                 s.request('iw-redis.get', prefix + 'set-test', function (e, res) {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
         ], function (e) {
             expect(e).to.be.null;
+            done();
+        });
+    });
+    it("should be return null when getting a redis key that isn't set", function (done) {
+        s.request('iw-redis.get', prefix + 'null-test', function (e, res) {
+            expect(e).to.be.null;
+            expect(res).to.be.equal(null);
             done();
         });
     });
@@ -166,7 +174,7 @@ describe('iw-redis', function () {
             function (cb) {
                 s.request('iw-redis.hgetall', prefix + 'set-test', function (e, res) {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -190,7 +198,7 @@ describe('iw-redis', function () {
             function (cb) {
                 s.request('iw-redis.hgetall', prefix + 'set-test', function (e, res) {
                     expect(e).to.be.null;
-                    expect(res.some).to.be.equal('data');
+                    expect(res.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -216,7 +224,7 @@ describe('iw-redis', function () {
                     expect(e).to.be.null;
                     expect(res.length).to.be.equal(1);
                     var obj = JSON.parse(res[0]);
-                    expect(obj.some).to.be.equal('data');
+                    expect(obj.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -242,7 +250,7 @@ describe('iw-redis', function () {
                     expect(e).to.be.null;
                     expect(res.length).to.be.equal(1);
                     var obj = JSON.parse(res[0]);
-                    expect(obj.some).to.be.equal('data');
+                    expect(obj.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -338,7 +346,7 @@ describe('iw-redis', function () {
                 }, function (e, res) {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKey);
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -366,7 +374,7 @@ describe('iw-redis', function () {
                 }, function (e, res) {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKey);
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -395,7 +403,7 @@ describe('iw-redis', function () {
         });
     });
     it("should return the first value added to any list if key is an array", function (done) {
-        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        var listKeyPrefix = prefix + 'multi-list-pop-test|';
         async.waterfall([
             function (cb) {
                 s.request('iw-redis.rpush', {
@@ -413,7 +421,7 @@ describe('iw-redis', function () {
                 }, function (e, res) {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKeyPrefix + '1');
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
@@ -423,7 +431,7 @@ describe('iw-redis', function () {
         });
     });
     it("should return the first value added to any list if key is a csv", function (done) {
-        var listKeyPrefix = prefix + 'multi-list-pop-test.';
+        var listKeyPrefix = prefix + 'multi-list-pop-test|';
         async.waterfall([
             function (cb) {
                 s.request('iw-redis.rpush', {
@@ -441,13 +449,86 @@ describe('iw-redis', function () {
                 }, function (e, res) {
                     expect(e).to.be.null;
                     expect(res.list).to.be.equal(listKeyPrefix + '1');
-                    expect(res.value.some).to.be.equal('data');
+                    expect(res.value.some).to.be.equal(test.some);
                     cb(e);
                 });
             }
         ], function (e) {
             expect(e).to.be.null;
             done();
+        });
+    });
+    it("should inform the 'message-[channel name]' event when a subscribed channel receives a publish message", function (done) {
+        var channel = prefix + 'test-channel';
+        s.info('iw-redis.message-' + channel, function (data) {
+            expect(data.some).to.be.equal(test.some);
+            done();
+        });
+        s.request('iw-redis.subscribe', channel, function (e, channelName) {
+            expect(e).to.be.null;
+            expect(channelName).to.be.equal(channel);
+            var anotherRedisClient = redis.createClient();
+            anotherRedisClient.publish(channel, JSON.stringify(test));
+        });
+    });
+    it("should inform the 'message' event when a subscribed channel receives a publish message", function (done) {
+        var channel = prefix + 'test-channel';
+        s.info('iw-redis.message', function (data) {
+            expect(data.channel).to.be.equal(channel);
+            expect(data.value.some).to.be.equal(test.some);
+            done();
+        });
+        s.request('iw-redis.subscribe', channel, function (e, channelName) {
+            expect(e).to.be.null;
+            expect(channelName).to.be.equal(channel);
+            var anotherRedisClient = redis.createClient();
+            anotherRedisClient.publish(channel, JSON.stringify(test));
+        });
+    });
+    it("should be able to publish to a channel", function (done) {
+        var channel = prefix + 'test-channel';
+        s.info('iw-redis.message-' + channel, function (data) {
+            expect(data.some).to.be.equal(test.some);
+            done();
+        });
+        s.request('iw-redis.subscribe', channel, function (e, channelName) {
+            expect(e).to.be.null;
+            expect(channelName).to.be.equal(channel);
+        });
+        s.request('iw-redis.publish', {
+            channel: channel,
+            value: test
+        }, function (e, subscriberCount) {
+            expect(e).to.be.null;
+            expect(subscriberCount).to.be.equal(1);
+        });
+    });
+    it("should not inform the 'message-[channel name]' event if unsubscribed", function (done) {
+        var channel = prefix + 'test-channel';
+        s.info('iw-redis.message-' + channel, function (data) {
+            throw new Error('event should not have been called once unsubscribed');
+        });
+        async.waterfall([
+            function (cb) {
+                s.request('iw-redis.subscribe', channel, function (e, channelName) {
+                    expect(e).to.be.null;
+                    expect(channelName).to.be.equal(channel);
+                    cb(null);
+                });
+            },
+            function (cb) {
+                s.request('iw-redis.unsubscribe', channel, function (e, channelName) {
+                    expect(e).to.be.null;
+                    expect(channelName).to.be.equal(channel);
+                    cb(null);
+                });
+            }
+        ], function (e) {
+            expect(e).to.be.null;
+            var anotherRedisClient = redis.createClient();
+            anotherRedisClient.publish(channel, JSON.stringify(test), function () {
+                setTimeout(done, 100);
+            });
         });
     });
     afterEach(function (done) {
