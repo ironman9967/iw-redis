@@ -424,7 +424,7 @@ var RedisWorker = (function (_super) {
     };
     RedisWorker.parseJsonSafe = function (obj) {
         try {
-            if (typeof obj === 'string' && obj.length > 0 && (obj[0] === '"' || obj[0] === '[' || obj[0] === '{'))
+            if (typeof obj === 'string' && obj.length > 0 && (obj[0] === '"' || obj[0] === '[' || obj[0] === '{' || obj[0] === 'n'))
                 obj = JSON.parse(obj);
         }
         catch (e) {
