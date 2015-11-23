@@ -1,6 +1,6 @@
 {
   "name": "redis-worker",
-  "version": "0.0.16",
+  "version": "0.0.19",
   "description": "",
   "main": "dist/index.js",
   "scripts": {

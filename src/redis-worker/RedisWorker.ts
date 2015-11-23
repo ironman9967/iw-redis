@@ -457,7 +457,7 @@ class RedisWorker extends Worker implements IWorker {
 
     private static parseJsonSafe(obj): any {
         try{
-            if(typeof obj === 'string' && obj.length > 0 && (obj[0]==='"' || obj[0]==='[' || obj[0]==='{'))
+            if(typeof obj === 'string' && obj.length > 0 && (obj[0]==='"' || obj[0]==='[' || obj[0]==='{' || obj[0]==='n'))
                 obj = JSON.parse(obj);
         }catch(e){
             return e;
