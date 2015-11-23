@@ -429,18 +429,14 @@ class RedisWorker extends Worker implements IWorker {
         });
 
         this.getRedisCloudService((e) => {
-            if (e !== null && !_.isUndefined(callback)) {
+            var listeners = _.filter(this.allCommListeners(), (l) => {
+                return l.commEvent.worker === this.me.name;
+            });
+            _.each(listeners, (l) => {
+                l.annotation.internal = true;
+            });
+            if (!_.isUndefined(callback)) {
                 callback(e);
-            }
-            else {
-                this.connect((e) => {
-                    if (e !== null && !_.isUndefined(callback)) {
-                        callback(e);
-                    }
-                    else {
-                        super.init(callback);
-                    }
-                });
             }
         });
         return this;

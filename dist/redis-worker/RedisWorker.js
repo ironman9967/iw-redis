@@ -398,18 +398,14 @@ var RedisWorker = (function (_super) {
             }
         });
         this.getRedisCloudService(function (e) {
-            if (e !== null && !_.isUndefined(callback)) {
+            var listeners = _.filter(_this.allCommListeners(), function (l) {
+                return l.commEvent.worker === _this.me.name;
+            });
+            _.each(listeners, function (l) {
+                l.annotation.internal = true;
+            });
+            if (!_.isUndefined(callback)) {
                 callback(e);
-            }
-            else {
-                _this.connect(function (e) {
-                    if (e !== null && !_.isUndefined(callback)) {
-                        callback(e);
-                    }
-                    else {
-                        _super.prototype.init.call(_this, callback);
-                    }
-                });
             }
         });
         return this;
