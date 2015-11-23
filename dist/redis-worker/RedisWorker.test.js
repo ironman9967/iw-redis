@@ -487,20 +487,29 @@ describe('iw-redis', function () {
     });
     it("should be able to publish to a channel", function (done) {
         var channel = prefix + 'test-channel';
-        s.info('iw-redis.message-' + channel, function (data) {
-            expect(data.some).to.be.equal(test.some);
+        async.waterfall([
+            function (cb) {
+                s.request('iw-redis.subscribe', channel, function (e, channelName) {
+                    expect(e).to.be.null;
+                    expect(channelName).to.be.equal(channel);
+                    cb(null);
+                });
+            },
+            function (cb) {
+                s.info('iw-redis.message-' + channel, function (data) {
+                    expect(data.some).to.be.equal(test.some);
+                    cb(null);
+                }).request('iw-redis.publish', {
+                    channel: channel,
+                    value: test
+                }, function (e, subscriberCount) {
+                    expect(e).to.be.null;
+                    expect(subscriberCount).to.be.equal(1);
+                });
+            }
+        ], function (e) {
+            expect(e).to.be.null;
             done();
-        });
-        s.request('iw-redis.subscribe', channel, function (e, channelName) {
-            expect(e).to.be.null;
-            expect(channelName).to.be.equal(channel);
-        });
-        s.request('iw-redis.publish', {
-            channel: channel,
-            value: test
-        }, function (e, subscriberCount) {
-            expect(e).to.be.null;
-            expect(subscriberCount).to.be.equal(1);
         });
     });
     it("should not inform the 'message-[channel name]' event if unsubscribed", function (done) {

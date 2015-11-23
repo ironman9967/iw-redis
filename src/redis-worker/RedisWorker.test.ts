@@ -526,20 +526,29 @@ describe('iw-redis', () => {
 
     it("should be able to publish to a channel", (done) => {
         var channel = prefix + 'test-channel';
-        s.info<ITest>('iw-redis.message-' + channel, (data) => {
-            expect(data.some).to.be.equal(test.some);
+        async.waterfall([
+            (cb) => {
+                s.request<string|string[], string>('iw-redis.subscribe', channel, (e, channelName) => {
+                    expect(e).to.be.null;
+                    expect(channelName).to.be.equal(channel);
+                    cb(null);
+                });
+            },
+            (cb) => {
+                s.info<ITest>('iw-redis.message-' + channel, (data) => {
+                    expect(data.some).to.be.equal(test.some);
+                    cb(null);
+                }).request<IPublish, string>('iw-redis.publish', {
+                    channel: channel,
+                    value: test
+                }, (e, subscriberCount) => {
+                    expect(e).to.be.null;
+                    expect(subscriberCount).to.be.equal(1);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
             done();
-        });
-        s.request<string|string[], string>('iw-redis.subscribe', channel, (e, channelName) => {
-            expect(e).to.be.null;
-            expect(channelName).to.be.equal(channel);
-        });
-        s.request<IPublish, string>('iw-redis.publish', {
-            channel: channel,
-            value: test
-        }, (e, subscriberCount) => {
-            expect(e).to.be.null;
-            expect(subscriberCount).to.be.equal(1);
         });
     });
 
