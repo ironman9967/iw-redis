@@ -24,7 +24,6 @@ import IRedisWorkerOpts = require('./IRedisWorkerOpts');
 
 class RedisWorker extends Worker implements IWorker {
     public redisServer: IRedisServer;
-    public client: redis.RedisClient;
     public subClient: redis.RedisClient;
 
     constructor(opts?: IRedisWorkerOpts) {
@@ -45,17 +44,39 @@ class RedisWorker extends Worker implements IWorker {
         else {
             stringData = JSON.stringify(info.value);
         }
-        this.client.set(info.key, stringData, (e) => {
-            if (!_.isUndefined(cb)) {
-                cb(e);
+        async.waterfall([
+            (cb) => {
+                this.connect((e, client) => {
+                    cb(e, client);
+                });
+            },
+            (client) => {
+                client.set(info.key, stringData, (e) => {
+                    if (!_.isUndefined(cb)) {
+                        cb(e);
+                    }
+                });
             }
+        ], (e) => {
+            cb(e);
         });
     }
 
     public init(callback?: (e: Error) => void): IWorker {
         this.respond<string, string[]>('keys', (pattern, cb) => {
-            this.client.keys(pattern, (e, keys) => {
-                cb(e, keys);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client) => {
+                    client.keys(pattern, (e, keys) => {
+                        cb(e, keys);
+                    });
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
@@ -68,19 +89,47 @@ class RedisWorker extends Worker implements IWorker {
             });
         });
 
-        this.respond("get",(key,cb) => {
-            this.client.get(key,function(err,results){
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                },err,results);
+        this.respond("get", (key,cb) => {
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.get(key, (e, results) => {
+                        cb(e, results);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
         this.respond("del",(key,cb) => {
-            this.client.del(key,function(err,results){
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                },err,results);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.del(key, (e, results) => {
+                        cb(e, results);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
         this.verify<string>('del-pattern', (pattern, cb) => {
@@ -90,7 +139,7 @@ class RedisWorker extends Worker implements IWorker {
                 }
                 else {
                     async.each(keys, (key, cb) => {
-                        this.request('del', key, (e, res) => {
+                        this.request('del', key, (e) => {
                             cb(e);
                         });
                     }, (e) => {
@@ -101,84 +150,231 @@ class RedisWorker extends Worker implements IWorker {
         });
 
         this.respond<ISet,any>("hmset",(data:ISet,cb) => {
-            this.client.hmset(data.key,data.value,function(err,results){
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                },err,results);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.hmset(data.key, data.value, (e, results) => {
+                        cb(e, results);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
         this.respond<string,any>("hgetall",(key:string,cb) => {
-            this.client.hgetall(key,function(err,results){
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                },err,results);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.hgetall(key, (e, results) => {
+                        cb(e, results);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
+            });
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.hgetall(key, (e, results) => {
+                        cb(e, results)
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
         this.respond("sadd", (data: ISet, cb) => {
-            this.client.sadd(data.key, data.value, (err, results) => {
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                }, err, results);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.sadd(data.key, data.value, (e, results) => {
+                        cb(e, results)
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
         this.respond("smembers", (key: string, cb) => {
-            this.client.smembers(key, (err, results) => {
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                }, err, results);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.smembers(key, (e, results) => {
+                        cb(e, results);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
         this.respond("srem", (data: ISet, cb) => {
-            this.client.srem(data.key, data.value, (err, results) => {
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                }, err, results);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.srem(data.key, data.value, (e, results) => {
+                        cb(e, results);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
         this.respond<IBlock, IListPop>('brpop', (block, cb) => {
             var timeout = RedisWorker.getBlockTimeout(block);
             var args: any[] = RedisWorker.getKeyArray(block.key);
-            this.client.brpop.apply(this.client, args.concat([
-                timeout,
-                (e, res) => {
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.brpop.apply(client, args.concat([
+                        timeout,
+                        (e, res) => {
+                            cb(e, res);
+                        }
+                    ]));
+
+                },
+                (res) => {
                     RedisWorker.parseListPopResults((e, res) => {
                         cb(e, res);
-                    }, e, res);
+                    }, res);
                 }
-            ]));
+            ], (e) => {
+                cb(e);
+            });
         });
 
         this.respond<IBlock, IListPop>('blpop', (block, cb) => {
             var timeout = RedisWorker.getBlockTimeout(block);
             var args: any[] = RedisWorker.getKeyArray(block.key);
-            this.client.blpop.apply(this.client, args.concat([
-                timeout,
-                (e, res) => {
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.blpop.apply(client, args.concat([
+                        timeout,
+                        (e, res) => {
+                            cb(e, res);
+                        }
+                    ]));
+
+                },
+                (res) => {
                     RedisWorker.parseListPopResults((e, res) => {
                         cb(e, res);
-                    }, e, res);
+                    }, res);
                 }
-            ]));
+            ], (e) => {
+                cb(e);
+            });
         });
 
         this.respond<ISet, any>('lpush', (data, cb) => {
-            this.client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                }, e, res);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
+                        cb(e, res);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
         this.respond<ISet, any>('rpush', (data, cb) => {
-            this.client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                }, e, res);
+            async.waterfall([
+                (cb) => {
+                    this.connect((e, client) => {
+                        cb(e, client);
+                    });
+                },
+                (client, cb) => {
+                    client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, (e, res) => {
+                        cb(e, res);
+                    });
+                },
+                (results) => {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, results);
+                }
+            ], (e) => {
+                cb(e);
             });
         });
 
@@ -186,9 +382,14 @@ class RedisWorker extends Worker implements IWorker {
             this.setSubClient();
             var args: any[] = RedisWorker.getKeyArray(channels);
             this.subClient.subscribe.apply(this.subClient, args.concat([(e, res) => {
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    cb(e, res);
-                }, e, res);
+                if (e === null) {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, res);
+                }
+                else {
+                    cb(e);
+                }
             }]));
         });
 
@@ -197,10 +398,14 @@ class RedisWorker extends Worker implements IWorker {
             var args: any[] = RedisWorker.getKeyArray(pub.channel);
             args.push(JSON.stringify(pub.value));
             client.publish.apply(client, args.concat([(e, res) => {
-                RedisWorker.parseKeyValuePairResults((e, res) => {
-                    client.end();
-                    cb(e, res);
-                }, e, res);
+                if (e === null) {
+                    RedisWorker.parseKeyValuePairResults((e, res) => {
+                        cb(e, res);
+                    }, res);
+                }
+                else {
+                    cb(e);
+                }
             }]));
         });
 
@@ -211,9 +416,14 @@ class RedisWorker extends Worker implements IWorker {
             else {
                 var args: any[] = RedisWorker.getKeyArray(channels);
                 this.subClient.unsubscribe.apply(this.subClient, args.concat([(e, res) => {
-                    RedisWorker.parseKeyValuePairResults((e, res) => {
-                        cb(e, res);
-                    }, e, res);
+                    if (e === null) {
+                        RedisWorker.parseKeyValuePairResults((e, res) => {
+                            cb(e, res);
+                        }, res);
+                    }
+                    else {
+                        cb(e);
+                    }
                 }]));
             }
         });
@@ -236,20 +446,16 @@ class RedisWorker extends Worker implements IWorker {
         return this;
     }
 
-    private static parseKeyValuePairResults(cb, e, results) {
-        if (e !== null) {
-            cb(e);
-        } else {
-            var errorOrObj = RedisWorker.parseJsonSafe(results);
-            if (errorOrObj instanceof Error) {
-                cb(errorOrObj);
+    private static parseKeyValuePairResults(cb, results) {
+        var errorOrObj = RedisWorker.parseJsonSafe(results);
+        if (errorOrObj instanceof Error) {
+            cb(errorOrObj);
+        }
+        else {
+            if (typeof errorOrObj === 'string' && errorOrObj === 'null') {
+                errorOrObj = null;
             }
-            else {
-                if (typeof errorOrObj === 'string' && errorOrObj === 'null') {
-                    errorOrObj = null;
-                }
-                cb(null, errorOrObj);
-            }
+            cb(null, errorOrObj);
         }
     }
 
@@ -263,12 +469,9 @@ class RedisWorker extends Worker implements IWorker {
         return obj;
     }
 
-    private static parseListPopResults(cb, e, results) {
-        if (e !== null) {
-            cb(e);
-        }
-        else if (results === null) {
-            cb(e, {
+    private static parseListPopResults(cb, results) {
+        if (results === null) {
+            cb(null, {
                 list: null,
                 value: null
             })
@@ -285,7 +488,7 @@ class RedisWorker extends Worker implements IWorker {
                         value: obj
                     })
                 }
-            }, e, results.pop());
+            }, results.pop());
         }
     }
 
@@ -304,13 +507,13 @@ class RedisWorker extends Worker implements IWorker {
     }
 
     private connect(cb) {
-        this.client = redis.createClient(this.redisServer.port,this.redisServer.hostname);
+        var client = redis.createClient(this.redisServer.port,this.redisServer.hostname);
         if(!_.isUndefined(this.redisServer.password)){
-            this.client.auth(this.redisServer.password, (err) => {
-                cb(err);
+            client.auth(this.redisServer.password, (err) => {
+                cb(err, client);
             });
         } else {
-            cb(null);
+            cb(null, client);
         }
 
     }
@@ -376,9 +579,6 @@ class RedisWorker extends Worker implements IWorker {
     }
 
     public dispose(callback?: () => void) {
-        if (!_.isUndefined(this.client)) {
-            this.client.end();
-        }
         if (!_.isUndefined(this.subClient)) {
             this.subClient.removeAllListeners('message');
             this.subClient.end();
