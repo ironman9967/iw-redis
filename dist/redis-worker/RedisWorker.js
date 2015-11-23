@@ -23,7 +23,6 @@ var RedisWorker = (function (_super) {
         this.opts.merge(opts);
     }
     RedisWorker.prototype.redisSet = function (info, cb) {
-        var _this = this;
         var stringData;
         if (typeof info.value === "string") {
             stringData = info.value;
@@ -31,39 +30,17 @@ var RedisWorker = (function (_super) {
         else {
             stringData = JSON.stringify(info.value);
         }
-        async.waterfall([
-            function (cb) {
-                _this.connect(function (e, client) {
-                    cb(e, client);
-                });
-            },
-            function (client) {
-                client.set(info.key, stringData, function (e) {
-                    if (!_.isUndefined(cb)) {
-                        cb(e);
-                    }
-                });
+        this.client.set(info.key, stringData, function (e) {
+            if (!_.isUndefined(cb)) {
+                cb(e);
             }
-        ], function (e) {
-            cb(e);
         });
     };
     RedisWorker.prototype.init = function (callback) {
         var _this = this;
         this.respond('keys', function (pattern, cb) {
-            async.waterfall([
-                function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client) {
-                    client.keys(pattern, function (e, keys) {
-                        cb(e, keys);
-                    });
-                }
-            ], function (e) {
-                cb(e);
+            _this.client.keys(pattern, function (e, keys) {
+                cb(e, keys);
             });
         });
         this.info("set", function (info) {
@@ -77,12 +54,7 @@ var RedisWorker = (function (_super) {
         this.respond("get", function (key, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.get(key, function (e, results) {
+                    _this.client.get(key, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -98,12 +70,7 @@ var RedisWorker = (function (_super) {
         this.respond("del", function (key, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.del(key, function (e, results) {
+                    _this.client.del(key, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -135,12 +102,7 @@ var RedisWorker = (function (_super) {
         this.respond("hmset", function (data, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.hmset(data.key, data.value, function (e, results) {
+                    _this.client.hmset(data.key, data.value, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -156,12 +118,7 @@ var RedisWorker = (function (_super) {
         this.respond("hgetall", function (key, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.hgetall(key, function (e, results) {
+                    _this.client.hgetall(key, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -175,12 +132,7 @@ var RedisWorker = (function (_super) {
             });
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.hgetall(key, function (e, results) {
+                    _this.client.hgetall(key, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -196,12 +148,7 @@ var RedisWorker = (function (_super) {
         this.respond("sadd", function (data, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.sadd(data.key, data.value, function (e, results) {
+                    _this.client.sadd(data.key, data.value, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -217,12 +164,7 @@ var RedisWorker = (function (_super) {
         this.respond("smembers", function (key, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.smembers(key, function (e, results) {
+                    _this.client.smembers(key, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -238,12 +180,7 @@ var RedisWorker = (function (_super) {
         this.respond("srem", function (data, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.srem(data.key, data.value, function (e, results) {
+                    _this.client.srem(data.key, data.value, function (e, results) {
                         cb(e, results);
                     });
                 },
@@ -261,12 +198,7 @@ var RedisWorker = (function (_super) {
             var args = RedisWorker.getKeyArray(block.key);
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.brpop.apply(client, args.concat([
+                    _this.client.brpop.apply(_this.client, args.concat([
                         timeout,
                         function (e, res) {
                             cb(e, res);
@@ -287,12 +219,7 @@ var RedisWorker = (function (_super) {
             var args = RedisWorker.getKeyArray(block.key);
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.blpop.apply(client, args.concat([
+                    _this.client.blpop.apply(_this.client, args.concat([
                         timeout,
                         function (e, res) {
                             cb(e, res);
@@ -311,12 +238,7 @@ var RedisWorker = (function (_super) {
         this.respond('lpush', function (data, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
+                    _this.client.lpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
                         cb(e, res);
                     });
                 },
@@ -332,12 +254,7 @@ var RedisWorker = (function (_super) {
         this.respond('rpush', function (data, cb) {
             async.waterfall([
                 function (cb) {
-                    _this.connect(function (e, client) {
-                        cb(e, client);
-                    });
-                },
-                function (client, cb) {
-                    client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
+                    _this.client.rpush(data.key, _.isObject(data.value) ? JSON.stringify(data.value) : data.value, function (e, res) {
                         cb(e, res);
                     });
                 },
@@ -353,31 +270,38 @@ var RedisWorker = (function (_super) {
         this.respond('subscribe', function (channels, cb) {
             _this.setSubClient();
             var args = RedisWorker.getKeyArray(channels);
-            _this.subClient.subscribe.apply(_this.subClient, args.concat([function (e, res) {
-                    if (e === null) {
-                        RedisWorker.parseKeyValuePairResults(function (e, res) {
+            async.waterfall([
+                function (cb) {
+                    _this.subClient.subscribe.apply(_this.subClient, args.concat([function (e, res) {
                             cb(e, res);
-                        }, res);
-                    }
-                    else {
-                        cb(e);
-                    }
-                }]));
+                        }]));
+                },
+                function (results) {
+                    RedisWorker.parseKeyValuePairResults(function (e, res) {
+                        cb(e, res);
+                    }, results);
+                }
+            ], function (e) {
+                cb(e);
+            });
         });
         this.respond('publish', function (pub, cb) {
-            var client = redis.createClient(_this.redisServer.port, _this.redisServer.hostname);
             var args = RedisWorker.getKeyArray(pub.channel);
             args.push(JSON.stringify(pub.value));
-            client.publish.apply(client, args.concat([function (e, res) {
-                    if (e === null) {
-                        RedisWorker.parseKeyValuePairResults(function (e, res) {
+            async.waterfall([
+                function (cb) {
+                    _this.client.publish.apply(_this.client, args.concat([function (e, res) {
                             cb(e, res);
-                        }, res);
-                    }
-                    else {
-                        cb(e);
-                    }
-                }]));
+                        }]));
+                },
+                function (results) {
+                    RedisWorker.parseKeyValuePairResults(function (e, res) {
+                        cb(e, res);
+                    }, results);
+                }
+            ], function (e) {
+                cb(e);
+            });
         });
         this.respond('unsubscribe', function (channels, cb) {
             if (_.isUndefined(_this.subClient)) {
@@ -385,25 +309,34 @@ var RedisWorker = (function (_super) {
             }
             else {
                 var args = RedisWorker.getKeyArray(channels);
-                _this.subClient.unsubscribe.apply(_this.subClient, args.concat([function (e, res) {
-                        if (e === null) {
-                            RedisWorker.parseKeyValuePairResults(function (e, res) {
+                async.waterfall([
+                    function (cb) {
+                        _this.subClient.unsubscribe.apply(_this.subClient, args.concat([function (e, res) {
                                 cb(e, res);
-                            }, res);
-                        }
-                        else {
-                            cb(e);
-                        }
-                    }]));
+                            }]));
+                    },
+                    function (results) {
+                        RedisWorker.parseKeyValuePairResults(function (e, res) {
+                            cb(e, res);
+                        }, results);
+                    }
+                ], function (e) {
+                    cb(e);
+                });
             }
         });
-        this.getRedisCloudService(function (e) {
-            var listeners = _.filter(_this.allCommListeners(), function (l) {
-                return l.commEvent.worker === _this.me.name;
-            });
-            _.each(listeners, function (l) {
-                l.annotation.internal = true;
-            });
+        async.waterfall([
+            function (cb) {
+                _this.getRedisCloudService(function (e) {
+                    cb(e);
+                });
+            },
+            function (cb) {
+                _this.connect(function (e) {
+                    cb(e);
+                });
+            }
+        ], function (e) {
             if (!_.isUndefined(callback)) {
                 callback(e);
             }
@@ -467,14 +400,14 @@ var RedisWorker = (function (_super) {
         return [key];
     };
     RedisWorker.prototype.connect = function (cb) {
-        var client = redis.createClient(this.redisServer.port, this.redisServer.hostname);
+        this.client = redis.createClient(this.redisServer.port, this.redisServer.hostname);
         if (!_.isUndefined(this.redisServer.password)) {
-            client.auth(this.redisServer.password, function (err) {
-                cb(err, client);
+            this.client.auth(this.redisServer.password, function (e) {
+                cb(e);
             });
         }
         else {
-            cb(null, client);
+            cb(null);
         }
     };
     RedisWorker.prototype.getRedisCloudService = function (cb) {

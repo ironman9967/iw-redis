@@ -74,7 +74,7 @@ module.exports = function (grunt) {
                     captureFile: 'results.txt',
                     quiet: false,
                     clearRequireCache: false,
-                    timeout: 60000
+                    timeout: 6000
                 },
                 src: ['src/**/*.test.js']
             }
