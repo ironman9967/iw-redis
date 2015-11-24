@@ -12,6 +12,7 @@ import idHelper = ironworks.helpers.idHelper;
 import Worker = ironworks.workers.Worker;
 import IWorker = ironworks.workers.IWorker;
 import IGenericConnection = ironworks.workers.IGenericConnection;
+import ICommListener = ironworks.eventing.ICommListener;
 
 import IRedisServer = require('./IRedisServer');
 import ISet = require('./ISet');
@@ -370,6 +371,11 @@ class RedisWorker extends Worker implements IWorker {
                 });
             }
         ], (e) => {
+            _.each<ICommListener>(this.allCommListeners(), (l) => {
+                l.annotation = _.extend(l.annotation, {
+                    internal: true
+                });
+            });
             if (!_.isUndefined(callback)) {
                 callback(e);
             }
