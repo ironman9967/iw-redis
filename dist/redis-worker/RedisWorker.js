@@ -337,6 +337,11 @@ var RedisWorker = (function (_super) {
                 });
             }
         ], function (e) {
+            _.each(_this.allCommListeners(), function (l) {
+                l.annotation = _.extend(l.annotation, {
+                    internal: true
+                });
+            });
             if (!_.isUndefined(callback)) {
                 callback(e);
             }
