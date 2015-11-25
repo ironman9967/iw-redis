@@ -372,9 +372,11 @@ class RedisWorker extends Worker implements IWorker {
             }
         ], (e) => {
             _.each<ICommListener>(this.allCommListeners(), (l) => {
-                l.annotation = _.extend(l.annotation, {
-                    internal: true
-                });
+                if (l.commEvent.worker === this.me.name) {
+                    l.annotation = _.extend(l.annotation, {
+                        internal: true
+                    });
+                }
             });
             if (!_.isUndefined(callback)) {
                 callback(e);
