@@ -338,9 +338,11 @@ var RedisWorker = (function (_super) {
             }
         ], function (e) {
             _.each(_this.allCommListeners(), function (l) {
-                l.annotation = _.extend(l.annotation, {
-                    internal: true
-                });
+                if (l.commEvent.worker === _this.me.name) {
+                    l.annotation = _.extend(l.annotation, {
+                        internal: true
+                    });
+                }
             });
             if (!_.isUndefined(callback)) {
                 callback(e);
