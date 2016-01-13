@@ -16,6 +16,7 @@
 		"./src/redis-worker/RedisWorker.test.ts",
 		"./src/redis-worker/RedisWorker.ts",
 		"./src/typings/master.d.ts",
-		"./src/typings/redis/redis.d.ts"
+		"./src/typings/redis/redis.d.ts",
+		"./src/typings/tsd/tsd.d.ts"
 	]
 }

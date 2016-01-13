@@ -1,6 +1,6 @@
 {
   "name": "redis-worker",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -24,6 +24,7 @@
     "grunt-contrib-clean": "^0.6.0",
     "grunt-contrib-copy": "^0.8.1",
     "grunt-mocha-test": "^0.12.7",
+    "grunt-replace": "^0.11.0",
     "grunt-shell": "^1.1.2",
     "mocha": "^2.2.5"
   },
