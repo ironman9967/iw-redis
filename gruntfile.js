@@ -13,6 +13,7 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-bump');
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-contrib-clean');
+    grunt.loadNpmTasks('grunt-replace');
 
     var pathToNode = grunt.option('path-to-node');
     if (_.isUndefined(pathToNode)) {
@@ -65,6 +66,9 @@ module.exports = function (grunt) {
             },
             addDistToGit: {
                 command: 'git add dist/* dist/**/*'
+            },
+            createTsdDFile: {
+                command: 'touch ' + projectRoot + '/src/typings/tsd/tsd.d.ts'
             }
         },
         mochaTest: {
@@ -73,8 +77,7 @@ module.exports = function (grunt) {
                     reporter: 'spec',
                     captureFile: 'results.txt',
                     quiet: false,
-                    clearRequireCache: false,
-                    timeout: 6000
+                    clearRequireCache: false
                 },
                 src: ['src/**/*.test.js']
             }
@@ -97,15 +100,32 @@ module.exports = function (grunt) {
                 regExp: false
             }
         },
+        replace: {
+            replaceNodeModuleInMasterD: {
+                options: {
+                    patterns: [
+                        {
+                            match: /node_modules/g,
+                            replacement: function () {
+                                return '..';
+                            }
+                        }
+                    ]
+                },
+                files: [
+                    {expand: true, flatten: true, src: ['dist/typings/master.d.ts'], dest: 'dist/typings'}
+                ]
+            }
+        },
         copy: {
             dist: {
                 files: [{
                     options: {
-                        noProcess: 'src/**/*.test.js'
+                        noProcess: '**/*.test.js'
                     },
                     expand: true,
                     cwd: 'src/',
-                    src: ['**/*.js', '*.d.ts'],
+                    src: ['**/*.js', '**/*.d.ts'],
                     dest: 'dist/'
                 }]
             }
@@ -141,6 +161,7 @@ module.exports = function (grunt) {
 
     grunt.registerTask('prep', [
         'shell:tsd',
+        'shell:createTsdDFile',
         'tsconfig'
     ]);
 
@@ -148,6 +169,7 @@ module.exports = function (grunt) {
         'shell:tsc',
         'clean:dist',
         'copy:dist',
+        'replace:replaceNodeModuleInMasterD',
         'shell:addDistToGit'
     ]);
 
