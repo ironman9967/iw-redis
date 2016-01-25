@@ -490,7 +490,7 @@ class RedisWorker extends Worker implements IWorker {
                     this.redisServer = <IRedisServer>{
                         hostname: c.host,
                         port: c.port,
-                        password: c.password
+                        password: (<any>_).get(c, 'data.credentials.password')
                     };
                     cb(null);
                 }

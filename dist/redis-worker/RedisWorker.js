@@ -447,7 +447,7 @@ var RedisWorker = (function (_super) {
                 _this.redisServer = {
                     hostname: c.host,
                     port: c.port,
-                    password: c.password
+                    password: _.get(c, 'data.credentials.password')
                 };
                 cb(null);
             }
