@@ -22,6 +22,7 @@ var RedisWorker = (function (_super) {
         this.opts.merge(opts);
     }
     RedisWorker.prototype.redisSet = function (info, cb) {
+        var _this = this;
         var stringData;
         if (typeof info.value === "string") {
             stringData = info.value;
@@ -30,6 +31,9 @@ var RedisWorker = (function (_super) {
             stringData = JSON.stringify(info.value);
         }
         this.client.set(info.key, stringData, function (e) {
+            if (!_.isUndefined(info.ex)) {
+                _this.client.expire(info.key, info.ex);
+            }
             if (!_.isUndefined(cb)) {
                 cb(e);
             }

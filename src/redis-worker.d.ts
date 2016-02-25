@@ -1,4 +1,3 @@
-
 declare module "redis-worker" {
 
     import ironworks = require('ironworks');
@@ -16,6 +15,7 @@ declare module "redis-worker" {
     export interface ISet {
         key: string;
         value: string|any;
+        ex?: number;
     }
 
     export interface IBlock {
