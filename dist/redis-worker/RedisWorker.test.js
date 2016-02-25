@@ -540,6 +540,36 @@ describe('iw-redis', function () {
             });
         });
     });
+    it("should be able to set a redis key with an expiration", function (done) {
+        var delay = 1;
+        async.waterfall([
+            function (cb) {
+                s.check('iw-redis.set', {
+                    key: prefix + 'set-test',
+                    value: test,
+                    ex: delay
+                }, function (e) {
+                    expect(e).to.be.null;
+                    cb(e);
+                });
+            },
+            function (cb) {
+                setTimeout(function () {
+                    cb(null);
+                }, (delay * 1000) + 50);
+            },
+            function (cb) {
+                s.request('iw-redis.get', prefix + 'set-test', function (e, res) {
+                    expect(e).to.be.null;
+                    expect(res === null).to.be.true;
+                    cb(e);
+                });
+            }
+        ], function (e) {
+            expect(e).to.be.null;
+            done();
+        });
+    });
     afterEach(function (done) {
         s.dispose(function () {
             done();

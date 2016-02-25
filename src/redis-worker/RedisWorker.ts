@@ -1,4 +1,3 @@
-
 ///<reference path='../typings/master.d.ts' />
 
 import _ = require('lodash');
@@ -47,6 +46,9 @@ class RedisWorker extends Worker implements IWorker {
             stringData = JSON.stringify(info.value);
         }
         this.client.set(info.key, stringData, (e) => {
+            if (!_.isUndefined(info.ex)) {
+                this.client.expire(info.key, info.ex);
+            }
             if (!_.isUndefined(cb)) {
                 cb(e);
             }

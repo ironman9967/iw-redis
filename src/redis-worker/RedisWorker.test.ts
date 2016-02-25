@@ -1,4 +1,3 @@
-
 ///<reference path='../typings/master.d.ts' />
 
 import chai = require('chai');
@@ -578,6 +577,37 @@ describe('iw-redis', () => {
             anotherRedisClient.publish(channel, JSON.stringify(test), () => {
                 setTimeout(done, 100);
             });
+        });
+    });
+
+    it("should be able to set a redis key with an expiration", (done) => {
+        var delay = 1;
+        async.waterfall([
+            (cb) => {
+                s.check<ISet>('iw-redis.set', {
+                    key: prefix + 'set-test',
+                    value: test,
+                    ex: delay
+                }, (e) => {
+                    expect(e).to.be.null;
+                    cb(e);
+                });
+            },
+            (cb) => {
+                setTimeout(() => {
+                    cb(null);
+                }, (delay * 1000) + 50);
+            },
+            (cb) => {
+                s.request<string, ITest> ('iw-redis.get', prefix + 'set-test', (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res === null).to.be.true;
+                    cb(e);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
         });
     });
 
