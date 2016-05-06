@@ -1,13 +1,15 @@
-.idea/
-node_modules/
-dist/node_modules/
 
-src/typings/tsd/
+ironworks.iws
+
+npm-debug.log
+dump.rdb
+
+node_modules/
+.idea/
+.c9
+.DS_Store
 
 src/**/*.js
 src/**/*.js.map
 
-results.txt
-
-npm-debug.log
-.DS_Store
+typings/

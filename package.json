@@ -1,21 +1,21 @@
 {
   "name": "redis-worker",
-  "version": "1.0.4",
+  "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "test": "grunt mochaTest:all"
+    "test": "grunt"
   },
   "repository": {
     "type": "git",
-    "url": "https://oses.homedepot.com/thdsal/iw-redis-worker"
+    "url": "https://github.com/ferrous-frameworks/iw-redis"
   },
   "author": "Tyson Hester",
   "license": "ISC",
   "bugs": {
-    "url": "https://oses.homedepot.com/thdsal/iw-redis-worker/issues"
+    "url": "https://github.com/ferrous-frameworks/iw-redis/issues"
   },
-  "homepage": "https://oses.homedepot.com/thdsal/iw-redis-worker#readme",
+  "homepage": "https://github.com/ferrous-frameworks/iw-redis#readme",
   "devDependencies": {
     "chai": "^3.2.0",
     "findit": "^2.0.0",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "async": "^1.4.0",
-    "ironworks": "git+ssh://git@oses.homedepot.com:thdsal/ironworks.git",
+    "ironworks": "^0.0.x",
     "lodash": "^3.10.0",
     "redis": "^1.0.0"
   }

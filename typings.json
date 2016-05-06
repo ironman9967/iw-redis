@@ -1,0 +1,8 @@
+{
+  "name": "redis-worker",
+  "version": "0.0.1",
+  "ambientDependencies": {
+    "node": "github:DefinitelyTyped/DefinitelyTyped/node/node.d.ts#bd269cad4cb2b495f940c7b6afc5825d568029be",
+    "redis": "registry:dt/redis#0.12.1+20160316155526"
+  }
+}

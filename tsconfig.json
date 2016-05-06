@@ -1,22 +1,19 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"sourceMap": true
+		"sourceMap": true,
+		"target": "es5",
+		"watch": false,
+		"declaration": false
 	},
-	"files": [
-		"./src/index.ts",
-		"./src/redis-worker.d.ts",
-		"./src/redis-worker/IBlock.ts",
-		"./src/redis-worker/IListPop.ts",
-		"./src/redis-worker/IPublish.ts",
-		"./src/redis-worker/IRedisServer.ts",
-		"./src/redis-worker/IRedisWorkerOpts.ts",
-		"./src/redis-worker/ISet.ts",
-		"./src/redis-worker/ISubscriptionMessage.ts",
-		"./src/redis-worker/RedisWorker.test.ts",
-		"./src/redis-worker/RedisWorker.ts",
-		"./src/typings/master.d.ts",
-		"./src/typings/redis/redis.d.ts",
-		"./src/typings/tsd/tsd.d.ts"
+	"filesGlob": [
+		"./src/**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"typings/browser",
+		"typings/browser.d.ts",
+		".c9"
 	]
 }
