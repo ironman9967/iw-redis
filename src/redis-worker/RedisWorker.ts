@@ -1,4 +1,4 @@
-///<reference path='../typings/master.d.ts' />
+///<reference path='../../typings/main.d.ts' />
 
 import _ = require('lodash');
 import async = require('async');
@@ -441,7 +441,7 @@ class RedisWorker extends Worker implements IWorker {
         if (_.isArray(key)) {
             return <string[]>key;
         }
-        else if (_.contains(key, ',')) {
+        else if ((<any>_).contains(key, ',')) {
             return (<string>key).split(',');
         }
         return [ <string>key ];

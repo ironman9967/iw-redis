@@ -1,3 +1,6 @@
+
+///<reference path='../typings/main.d.ts' />
+
 declare module "redis-worker" {
 
     import ironworks = require('ironworks');
@@ -9,7 +12,7 @@ declare module "redis-worker" {
     export interface IRedisServer {
         hostname: string;
         port: string;
-        password: string;
+        password: string; inst
     }
 
     export interface ISet {

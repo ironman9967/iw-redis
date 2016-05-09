@@ -1,4 +1,3 @@
-///<reference path='../typings/master.d.ts' />
 
 import chai = require('chai');
 var expect = chai.expect;
@@ -347,8 +346,8 @@ describe('iw-redis', () => {
                 s.request<string, string[]> ('iw-redis.keys', prefix + '*', (e, res) => {
                     expect(e).to.be.null;
                     expect(res.length).to.be.equal(2);
-                    expect(_.contains(res, prefix + 'set-test1')).to.be.true;
-                    expect(_.contains(res, prefix + 'set-test2')).to.be.true;
+                    expect((<any>_).contains(res, prefix + 'set-test1')).to.be.true;
+                    expect((<any>_).contains(res, prefix + 'set-test2')).to.be.true;
                     cb(e);
                 });
             }
