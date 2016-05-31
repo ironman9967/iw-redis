@@ -76,11 +76,11 @@ module.exports = function(grunt) {
         },
         bump: {
             options: {
-                files: ['package.json'],
+                files: ['package.json', 'typings.json'],
                 updateConfigs: [],
                 commit: true,
                 commitMessage: 'Release v%VERSION%',
-                commitFiles: ['package.json'],
+                commitFiles: ['package.json', 'typings.json'],
                 createTag: true,
                 tagName: 'v%VERSION%',
                 tagMessage: 'Version %VERSION%',
@@ -99,12 +99,44 @@ module.exports = function(grunt) {
                     cwd: 'src/',
                     src: ['**/*.js', '*.d.ts', '!**/*.test.js'],
                     dest: 'dist/'
+                }, {
+                    expand: true,
+                    src: 'typings/**/*.*',
+                    dest: 'dist/'
                 }]
             }
         },
         clean: {
             dist: [ "dist" ]
+        },
+        replace: {
+            dist: {
+                options: {
+                    patterns: [
+                        {
+                            match: /\.\.\/\.\.\/typings\/main/,
+                            replacement: "./main"
+                        }
+                    ]
+                },
+                files: [
+                    {expand: true, flatten: true, src: ['dist/typings/master.d.ts'], dest: 'dist/typings'}
+                ]
+            }
         }
+
+        //Typedoc 1.5 compatiblity not ready
+        //typedoc: {
+        //    build: {
+        //        options: {
+        //            module: 'commonjs',
+        //            target: 'es5',
+        //            out: 'docs/',
+        //            name: 'ironworks'
+        //        },
+        //        src: 'src/**/*'
+        //    }
+        //}
     });
 
 
