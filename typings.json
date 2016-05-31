@@ -1,6 +1,6 @@
 {
   "name": "redis-worker",
-  "version": "0.0.1",
+  "version": "0.0.26",
   "main": "dist/redis-worker.d.ts",
   "homepage": "https://github.com/ferrous-frameworks/iw-redis",
   "devDependencies": {
