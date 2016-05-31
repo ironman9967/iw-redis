@@ -1,7 +1,7 @@
 
 ///<reference path='../typings/main.d.ts' />
 
-declare module "redis-worker" {
+declare module "iw-redis" {
 
     import ironworks = require('ironworks');
 
