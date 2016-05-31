@@ -11,7 +11,7 @@
     "url": "https://github.com/ferrous-frameworks/iw-redis"
   },
   "author": "Tyson Hester",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/ferrous-frameworks/iw-redis/issues"
   },
