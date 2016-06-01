@@ -3,6 +3,7 @@ ironworks.iws
 
 npm-debug.log
 dump.rdb
+results.txt
 
 node_modules/
 .idea/
@@ -11,6 +12,3 @@ node_modules/
 
 src/**/*.js
 src/**/*.js.map
-
-typings/
-!dist/typings/

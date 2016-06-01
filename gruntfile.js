@@ -15,6 +15,7 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-mocha-test');
     grunt.loadNpmTasks('grunt-shell');
     grunt.loadNpmTasks('grunt-bump');
+	grunt.loadNpmTasks('grunt-replace');
 
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-contrib-clean');
@@ -76,11 +77,11 @@ module.exports = function(grunt) {
         },
         bump: {
             options: {
-                files: ['package.json', 'typings.json'],
+                files: ['package.json'],
                 updateConfigs: [],
                 commit: true,
                 commitMessage: 'Release v%VERSION%',
-                commitFiles: ['package.json', 'typings.json'],
+                commitFiles: ['package.json'],
                 createTag: true,
                 tagName: 'v%VERSION%',
                 tagMessage: 'Version %VERSION%',
@@ -97,11 +98,7 @@ module.exports = function(grunt) {
                 files: [{
                     expand: true,
                     cwd: 'src/',
-                    src: ['**/*.js', '*.d.ts', '!**/*.test.js'],
-                    dest: 'dist/'
-                }, {
-                    expand: true,
-                    src: 'typings/**/*.*',
+                    src: ['**/*.js', '*.d.ts', '!**/*.test.js', 'typings/*.d.ts', 'typings/**/*.d.ts'],
                     dest: 'dist/'
                 }]
             }
@@ -114,13 +111,13 @@ module.exports = function(grunt) {
                 options: {
                     patterns: [
                         {
-                            match: /\.\.\/\.\.\/typings\/main/,
-                            replacement: "./main"
+                            match: /\.\.\/\.\.\/node_modules/,
+                            replacement: "../../.."
                         }
                     ]
                 },
                 files: [
-                    {expand: true, flatten: true, src: ['dist/typings/master.d.ts'], dest: 'dist/typings'}
+                    {expand: true, flatten: true, src: ['dist/typings/index.d.ts'], dest: 'dist/typings'}
                 ]
             }
         }
@@ -141,13 +138,14 @@ module.exports = function(grunt) {
 
 
     grunt.registerTask('prep', [
-        'shell:typings'
+        //'shell:typings'
     ]);
 
     grunt.registerTask('build', [
         'shell:tsc',
         'clean:dist',
         'copy:dist',
+		'replace:dist',
         'shell:addDistToGit'
     ]);
 

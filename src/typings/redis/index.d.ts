@@ -653,10 +653,10 @@ namespace redis {
 export = redis;
 }
 declare module 'redis/index' {
-import main = require('~redis/index');
-export = main;
+import alias = require('~redis/index');
+export = alias;
 }
 declare module 'redis' {
-import main = require('~redis/index');
-export = main;
+import alias = require('~redis/index');
+export = alias;
 }

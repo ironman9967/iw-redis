@@ -1,4 +1,3 @@
-///<reference path='../../typings/main.d.ts' />
 
 import _ = require('lodash');
 import async = require('async');
