@@ -1,0 +1,17 @@
+
+.gitignore
+.travis.yml
+.c9
+.DS_Store
+
+.idea/
+
+npm-debug.log
+iron-tree.iws
+
+gruntfile.js
+tsconfig.json
+typings.json
+
+src/
+typings/

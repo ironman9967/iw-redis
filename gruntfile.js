@@ -3,41 +3,37 @@ var path = require('path');
 
 var _ = require('lodash');
 
-var tsConfigInit = require('./utils/tsc/tsConfigInit');
-
-module.exports = function (grunt) {
-    'use strict';
-
-    grunt.loadNpmTasks('grunt-mocha-test');
-    grunt.loadNpmTasks('grunt-shell');
-    grunt.loadNpmTasks('grunt-bump');
-    grunt.loadNpmTasks('grunt-contrib-copy');
-    grunt.loadNpmTasks('grunt-contrib-clean');
-    grunt.loadNpmTasks('grunt-replace');
-
+module.exports = function(grunt) {
     var pathToNode = grunt.option('path-to-node');
     if (_.isUndefined(pathToNode)) {
         pathToNode = path.join(process.execPath, '/../../');
     }
+
     var tsBin = path.join(pathToNode, 'lib/node_modules/typescript/bin');
     var nodeBin = path.join(pathToNode, 'bin');
-    var projectRoot = __dirname;
+
+    grunt.loadNpmTasks('grunt-mocha-test');
+    grunt.loadNpmTasks('grunt-shell');
+    grunt.loadNpmTasks('grunt-bump');
+	grunt.loadNpmTasks('grunt-replace');
+
+    grunt.loadNpmTasks('grunt-contrib-copy');
+    grunt.loadNpmTasks('grunt-contrib-clean');
+
 
     grunt.initConfig({
+        pkg: grunt.file.readJSON('package.json'),
+
+
         nodeBin: nodeBin,
         tscExec: path.join(tsBin, 'tsc'),
+
+
         shell: {
-            tsd: {
-                command: [
-                    'mkdir -p src'
-                    , 'cd src'
-                    , 'mkdir -p typings'
-                    , 'cd typings'
-                    , 'mkdir -p tsd'
-                    , 'cd ' + projectRoot
-                    , '<%= nodeBin %>/tsd reinstall -s'
-                ].join('&&')
+            typings: {
+                command: 'typings install'
             },
+
             tsc: {
                 options: {
                     stdout: false,
@@ -62,22 +58,19 @@ module.exports = function (grunt) {
                         cb(e);
                     }
                 },
-                command: '<%= tscExec %> --project .'
+                command: '<%= tscExec %> --project ./'
             },
             addDistToGit: {
                 command: 'git add dist/* dist/**/*'
-            },
-            createTsdDFile: {
-                command: 'touch ' + projectRoot + '/src/typings/tsd/tsd.d.ts'
             }
         },
+
         mochaTest: {
             all: {
                 options: {
-                    reporter: 'spec',
-                    captureFile: 'results.txt',
-                    quiet: false,
-                    clearRequireCache: false
+                    colors: true,
+                    log: true,
+                    logErrors: true
                 },
                 src: ['src/**/*.test.js']
             }
@@ -100,76 +93,59 @@ module.exports = function (grunt) {
                 regExp: false
             }
         },
-        replace: {
-            replaceNodeModuleInMasterD: {
-                options: {
-                    patterns: [
-                        {
-                            match: /node_modules/g,
-                            replacement: function () {
-                                return '..';
-                            }
-                        }
-                    ]
-                },
-                files: [
-                    {expand: true, flatten: true, src: ['dist/typings/master.d.ts'], dest: 'dist/typings'}
-                ]
-            }
-        },
         copy: {
             dist: {
                 files: [{
-                    options: {
-                        noProcess: '**/*.test.js'
-                    },
                     expand: true,
                     cwd: 'src/',
-                    src: ['**/*.js', '**/*.d.ts'],
+                    src: ['**/*.js', '*.d.ts', '!**/*.test.js', 'typings/*.d.ts', 'typings/**/*.d.ts'],
                     dest: 'dist/'
                 }]
             }
         },
         clean: {
             dist: [ "dist" ]
+        },
+        replace: {
+            dist: {
+                options: {
+                    patterns: [
+                        {
+                            match: /\.\.\/\.\.\/node_modules/,
+                            replacement: "../../.."
+                        }
+                    ]
+                },
+                files: [
+                    {expand: true, flatten: true, src: ['dist/typings/index.d.ts'], dest: 'dist/typings'}
+                ]
+            }
         }
+
+        //Typedoc 1.5 compatiblity not ready
+        //typedoc: {
+        //    build: {
+        //        options: {
+        //            module: 'commonjs',
+        //            target: 'es5',
+        //            out: 'docs/',
+        //            name: 'ironworks'
+        //        },
+        //        src: 'src/**/*'
+        //    }
+        //}
     });
 
-    grunt.registerTask('tsconfig', 'initialize tsconfig.json with the current project files', function () {
-        var done = this.async();
-        tsConfigInit({
-            dirsToCompile: [
-                'src'
-            ],
-            pathToTsConfig: './tsconfig.json'
-        }, function (e, results) {
-            if (_.isUndefined(e)) {
-                grunt.log.subhead('tsconfig.json init results ---');
-                _.each(results.tsFiles, function (tsf) {
-                    grunt.log.ok("included " + tsf);
-                });
-                _.each(results.ignored, function (ignored) {
-                    grunt.log.ok("ignored directory " + ignored);
-                });
-                grunt.log.ok();
-                done();
-                return;
-            }
-            done(e);
-        });
-    });
 
     grunt.registerTask('prep', [
-        'shell:tsd',
-        'shell:createTsdDFile',
-        'tsconfig'
+        //'shell:typings'
     ]);
 
     grunt.registerTask('build', [
         'shell:tsc',
         'clean:dist',
         'copy:dist',
-        'replace:replaceNodeModuleInMasterD',
+		'replace:dist',
         'shell:addDistToGit'
     ]);
 

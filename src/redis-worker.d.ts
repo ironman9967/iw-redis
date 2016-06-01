@@ -1,47 +1,48 @@
-declare module "redis-worker" {
 
-    import ironworks = require('ironworks');
+/// <reference path='./typings/index.d.ts' />
 
-    import Worker = ironworks.workers.Worker;
-    import IWorker = ironworks.workers.IWorker;
-    import IWorkerChildOpts = ironworks.options.IWorkerChildOpts;
+declare module "iw-redis" {
+	import ironworks = require('ironworks');
 
-    export interface IRedisServer {
-        hostname: string;
-        port: string;
-        password: string;
-    }
+	import Worker = ironworks.workers.Worker;
+	import IWorker = ironworks.workers.IWorker;
+	import IWorkerChildOpts = ironworks.options.IWorkerChildOpts;
 
-    export interface ISet {
-        key: string;
-        value: string|any;
-        ex?: number;
-    }
+	export interface IRedisServer {
+	    hostname: string;
+	    port: string;
+	    password: string; inst
+	}
 
-    export interface IBlock {
-        key: string|string[];
-        timeoutInSeconds?: number;
-    }
+	export interface ISet {
+	    key: string;
+	    value: string|any;
+	    ex?: number;
+	}
 
-    export interface IListPop {
-        list: string;
-        value: any;
-    }
+	export interface IBlock {
+	    key: string|string[];
+	    timeoutInSeconds?: number;
+	}
 
-    export interface ISubscriptionMessage {
-        channel: string;
-        value: any;
-    }
+	export interface IListPop {
+	    list: string;
+	    value: any;
+	}
 
-    export interface IPublish {
-        channel: string|string[];
-        value: any;
-    }
+	export interface ISubscriptionMessage {
+	    channel: string;
+	    value: any;
+	}
 
-    export interface IRedisWorkerOpts extends IWorkerChildOpts {}
+	export interface IPublish {
+	    channel: string|string[];
+	    value: any;
+	}
 
-    export class RedisWorker extends Worker implements IWorker {
-        constructor(opts?: IRedisWorkerOpts);
-    }
+	export interface IRedisWorkerOpts extends IWorkerChildOpts {}
 
+	export class RedisWorker extends Worker implements IWorker {
+	    constructor(opts?: IRedisWorkerOpts);
+	}
 }
