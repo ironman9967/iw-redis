@@ -18,6 +18,7 @@ import RedisWorker = require('./RedisWorker');
 
 import ISet = require('./ISet');
 import IBlock = require('./IBlock');
+import IIncrBy = require('./IIncrBy');
 import IListPop = require('./IListPop');
 import IPublish = require('./IPublish');
 import ISubscriptionMessage = require('./ISubscriptionMessage');
@@ -55,6 +56,47 @@ describe('iw-redis', () => {
             });
         });
         s.start();
+    });
+    
+    it("should be able to increment a redis key by a given value", (done) => {
+        async.waterfall([
+            (cb) => {
+                s.check<ISet>('iw-redis.set', {
+                    key: prefix + 'incrby-test',
+                    value: 0
+                }, (e) => {
+                    expect(e).to.be.null;
+                    cb(e);
+                });
+            },
+            (cb) => {
+                s.request<string, string> ('iw-redis.get', prefix + 'incrby-test', (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal('0');
+                    cb(e);
+                });
+            },
+            (cb) => {
+                s.request<IIncrBy, string> ('iw-redis.incrby', { 
+                    key: prefix + 'incrby-test',
+                    value: 5
+                }, (e, result) => {
+                    expect(e).to.be.null;
+                    expect(result).to.be.equal(5);
+                    cb(e);
+                });
+            },
+            (cb) => {
+                s.request<string, string> ('iw-redis.get', prefix + 'incrby-test', (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal('5');
+                    cb(e);
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
     });
 
     it("should be able to set a redis key", (done) => {

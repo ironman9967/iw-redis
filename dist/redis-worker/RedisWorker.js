@@ -328,6 +328,11 @@ var RedisWorker = (function (_super) {
                 });
             }
         });
+        this.respond('incrby', function (data, cb) {
+            _this.client.incrby(data.key, data.value, function (e, results) {
+                cb(e, results);
+            });
+        });
         async.waterfall([
             function (cb) {
                 _this.getRedisCloudService(function (e) {

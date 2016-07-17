@@ -24,6 +24,11 @@ declare module "iw-redis" {
 	    key: string|string[];
 	    timeoutInSeconds?: number;
 	}
+	
+	export interface IIncrBy {
+	    key: string;
+	    value: number;
+	}
 
 	export interface IListPop {
 	    list: string;

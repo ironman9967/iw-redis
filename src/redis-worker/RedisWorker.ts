@@ -15,6 +15,7 @@ import ICommListener = ironworks.eventing.ICommListener;
 import IRedisServer = require('./IRedisServer');
 import ISet = require('./ISet');
 import IBlock = require('./IBlock');
+import IIncrBy = require('./IIncrBy');
 import IListPop = require('./IListPop');
 import IPublish = require('./IPublish');
 import ISubscriptionMessage = require('./ISubscriptionMessage');
@@ -358,6 +359,12 @@ class RedisWorker extends Worker implements IWorker {
                     cb(e);
                 });
             }
+        });
+        
+        this.respond<IIncrBy, number>('incrby', (data, cb) => {
+            this.client.incrby(data.key, data.value, (e, results) => {
+                cb(e, results);
+            });
         });
 
         async.waterfall([
