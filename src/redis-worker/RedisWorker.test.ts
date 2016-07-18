@@ -652,6 +652,128 @@ describe('iw-redis', () => {
         });
     });
 
+    it("should be able to add a score and member to a sorted set", (done) => {
+        s.request('iw-redis.zadd', {
+            key: prefix + '.zadd-test',
+            score: 1,
+            member: 'test'
+        }, (e, res) => {
+            expect(e).to.be.null;
+            expect(res).to.be.equal(1);
+            done();
+        });
+    });
+
+    it("should be able to remove a range from a sorted set by rank (min and max)", (done) => {
+        async.waterfall([
+            (cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zremrangebyrank-test',
+                    score: 1,
+                    member: 'test1'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null, 1)
+                });
+            },
+            (score, cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zremrangebyrank-test',
+                    score: ++score,
+                    member: 'test2'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null, score);
+                });
+            },
+            (score, cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zremrangebyrank-test',
+                    score: ++score,
+                    member: 'test3'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null);
+                });
+            },
+            (cb) => {
+                s.request('iw-redis.zremrangebyrank', {
+                    key: prefix + '.zremrangebyrank-test',
+                    min: 0,
+                    max: 1
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(2);
+                    done();
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+
+    it("should be able to return a range (start to stop) in reverse from a sorted set", (done) => {
+        async.waterfall([
+            (cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zrevrange-test',
+                    score: 1,
+                    member: 'test1'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null, 1)
+                });
+            },
+            (score, cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zrevrange-test',
+                    score: ++score,
+                    member: 'test2'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null, score);
+                });
+            },
+            (score, cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zrevrange-test',
+                    score: ++score,
+                    member: 'test3'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null);
+                });
+            },
+            (cb) => {
+                s.request('iw-redis.zrevrange', {
+                    key: prefix + '.zrevrange-test',
+                    start: 1,
+                    stop: -1,
+                    withScores: true
+                }, (e, res: any) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.an('array');
+                    expect(res.length).to.be.equal(2);
+                    expect(res[0].member).to.be.equal('test2');
+                    expect(res[0].score).to.be.equal(2);
+                    expect(res[1].member).to.be.equal('test3');
+                    expect(res[1].score).to.be.equal(3);
+                    done();
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+
     afterEach((done) => {
         s.dispose(() => {
             done();

@@ -366,6 +366,42 @@ class RedisWorker extends Worker implements IWorker {
                 cb(e, results);
             });
         });
+        
+        this.respond<IZAdd, number>('zadd', (data, cb) => {
+            this.client.zadd(data.key, data.score, data.member, (e, res) => {
+                cb(e, res);
+            });
+        });
+        
+        this.respond<IZRemRangeByScore, number>('zremrangebyrank', (data, cb) => {
+            this.client.zremrangebyrank(data.key, data.min, data.max, (e, res) => {
+                cb(e, res);
+            });
+        });
+        
+        this.respond<IZRevRange, any[]>('zrevrange', (data, cb) => {
+            let args = [
+                data.key,
+                data.start,
+                data.stop
+            ];
+            if (data.withScores) {
+                args.push('WITHSCORES');
+            }
+            this.client.zrange.apply(this.client, args.concat([(e, res) => {
+                if (data.withScores) {
+                    let processed = [];
+                    for (let i = 0; i < res.length; i++) {
+                        processed.push({
+                            member: res[i],
+                            score: res[++i] | 0
+                        });
+                    }
+                    res = processed;
+                }
+                cb(e, res);
+            }]));
+        });
 
         async.waterfall([
             (cb) => {
