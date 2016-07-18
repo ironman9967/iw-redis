@@ -44,6 +44,30 @@ declare module "iw-redis" {
 	    channel: string|string[];
 	    value: any;
 	}
+	
+	export interface IZAdd {
+	    key: string;
+	    score: number;
+	    member: string;
+	}
+	
+	export interface IZRevRange {
+	    key: string;
+	    start: number;
+	    stop: number;
+	    withScores: boolean;
+	}
+	
+	export interface IZRemRangeByRank {
+	    key: string;
+	    min: number;
+	    max: number;
+	}
+	
+	export interface IZRem {
+	    key: string;
+	    member: string;
+	}
 
 	export interface IRedisWorkerOpts extends IWorkerChildOpts {}
 

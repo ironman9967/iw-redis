@@ -333,19 +333,16 @@ var RedisWorker = (function (_super) {
                 cb(e, results);
             });
         });
-        //<IZAdd, number>
         this.respond('zadd', function (data, cb) {
             _this.client.zadd(data.key, data.score, data.member, function (e, res) {
                 cb(e, res);
             });
         });
-        //<IZRemRangeByScore, number>
         this.respond('zremrangebyrank', function (data, cb) {
             _this.client.zremrangebyrank(data.key, data.min, data.max, function (e, res) {
                 cb(e, res);
             });
         });
-        //<IZRevRange, ???>
         this.respond('zrevrange', function (data, cb) {
             var args = [
                 data.key,
@@ -355,7 +352,7 @@ var RedisWorker = (function (_super) {
             if (data.withScores) {
                 args.push('WITHSCORES');
             }
-            _this.client.zrange.apply(_this.client, args.concat([function (e, res) {
+            _this.client.zrevrange.apply(_this.client, args.concat([function (e, res) {
                     if (data.withScores) {
                         var processed = [];
                         for (var i = 0; i < res.length; i++) {
@@ -368,6 +365,11 @@ var RedisWorker = (function (_super) {
                     }
                     cb(e, res);
                 }]));
+        });
+        this.respond('zrem', function (data, cb) {
+            _this.client.zrem(data.key, data.member, function (e, res) {
+                cb(e, res);
+            });
         });
         async.waterfall([
             function (cb) {

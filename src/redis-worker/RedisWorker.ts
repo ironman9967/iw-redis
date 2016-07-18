@@ -19,6 +19,10 @@ import IIncrBy = require('./IIncrBy');
 import IListPop = require('./IListPop');
 import IPublish = require('./IPublish');
 import ISubscriptionMessage = require('./ISubscriptionMessage');
+import IZAdd = require('./IZAdd');
+import IZRemRangeByRank = require('./IZRemRangeByRank');
+import IZRevRange = require('./IZRevRange');
+import IZRem = require('./IZRem');
 
 import IRedisWorkerOpts = require('./IRedisWorkerOpts');
 
@@ -373,14 +377,14 @@ class RedisWorker extends Worker implements IWorker {
             });
         });
         
-        this.respond<IZRemRangeByScore, number>('zremrangebyrank', (data, cb) => {
+        this.respond<IZRemRangeByRank, number>('zremrangebyrank', (data, cb) => {
             this.client.zremrangebyrank(data.key, data.min, data.max, (e, res) => {
                 cb(e, res);
             });
         });
         
         this.respond<IZRevRange, any[]>('zrevrange', (data, cb) => {
-            let args = [
+            let args: any = [
                 data.key,
                 data.start,
                 data.stop
@@ -388,7 +392,7 @@ class RedisWorker extends Worker implements IWorker {
             if (data.withScores) {
                 args.push('WITHSCORES');
             }
-            this.client.zrange.apply(this.client, args.concat([(e, res) => {
+            this.client.zrevrange.apply(this.client, args.concat([(e, res) => {
                 if (data.withScores) {
                     let processed = [];
                     for (let i = 0; i < res.length; i++) {
@@ -401,6 +405,12 @@ class RedisWorker extends Worker implements IWorker {
                 }
                 cb(e, res);
             }]));
+        });
+        
+        this.respond<IZRem, number>('zrem', (data, cb) => {
+            this.client.zrem(data.key, data.member, (e, res) => {
+                cb(e, res);
+            });
         });
 
         async.waterfall([

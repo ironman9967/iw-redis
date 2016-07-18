@@ -63,6 +63,11 @@ declare module "iw-redis" {
 	    min: number;
 	    max: number;
 	}
+	
+	export interface IZRem {
+	    key: string;
+	    member: string;
+	}
 
 	export interface IRedisWorkerOpts extends IWorkerChildOpts {}
 

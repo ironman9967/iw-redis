@@ -763,8 +763,76 @@ describe('iw-redis', () => {
                     expect(res.length).to.be.equal(2);
                     expect(res[0].member).to.be.equal('test2');
                     expect(res[0].score).to.be.equal(2);
-                    expect(res[1].member).to.be.equal('test3');
-                    expect(res[1].score).to.be.equal(3);
+                    expect(res[1].member).to.be.equal('test1');
+                    expect(res[1].score).to.be.equal(1);
+                    done();
+                });
+            }
+        ], (e) => {
+            expect(e).to.be.null;
+            done();
+        });
+    });
+
+    it("should be able to remove a member from a sorted set", (done) => {
+        async.waterfall([
+            (cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zrem-test',
+                    score: 1,
+                    member: 'test1'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null, 1)
+                });
+            },
+            (score, cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zrem-test',
+                    score: ++score,
+                    member: 'test2'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null, score);
+                });
+            },
+            (score, cb) => {
+                s.request('iw-redis.zadd', {
+                    key: prefix + '.zrem-test',
+                    score: ++score,
+                    member: 'test3'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null);
+                });
+            },
+            (cb) => {
+                s.request('iw-redis.zrem', {
+                    key: prefix + '.zrem-test',
+                    member: 'test1'
+                }, (e, res) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.equal(1);
+                    cb(null);
+                });
+            },
+            (cb) => {
+                s.request('iw-redis.zrevrange', {
+                    key: prefix + '.zrem-test',
+                    start: 0,
+                    stop: -1,
+                    withScores: true
+                }, (e, res: any) => {
+                    expect(e).to.be.null;
+                    expect(res).to.be.an('array');
+                    expect(res.length).to.be.equal(2);
+                    expect(res[0].member).to.be.equal('test3');
+                    expect(res[0].score).to.be.equal(3);
+                    expect(res[1].member).to.be.equal('test2');
+                    expect(res[1].score).to.be.equal(2);
                     done();
                 });
             }
