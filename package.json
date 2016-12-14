@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "async": "^1.4.0",
-    "ironworks": "^0.0.x",
+    "ironworks": "*",
     "lodash": "^3.10.0",
     "redis": "^1.0.0"
   }
