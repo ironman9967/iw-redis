@@ -501,6 +501,9 @@ class RedisWorker extends Worker implements IWorker {
 
     private connect(cb: (e: Error) => void) {
         this.client = redis.createClient(this.redisServer.port,this.redisServer.hostname);
+        this.client.on('error', function (err) {
+            return;
+        });
         if(!_.isUndefined(this.redisServer.password)){
             this.client.auth(this.redisServer.password, (e) => {
                 cb(e);
