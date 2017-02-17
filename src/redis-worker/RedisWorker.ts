@@ -364,25 +364,25 @@ class RedisWorker extends Worker implements IWorker {
                 });
             }
         });
-        
+
         this.respond<IIncrBy, number>('incrby', (data, cb) => {
             this.client.incrby(data.key, data.value, (e, results) => {
                 cb(e, results);
             });
         });
-        
+
         this.respond<IZAdd, number>('zadd', (data, cb) => {
             this.client.zadd(data.key, data.score, data.member, (e, res) => {
                 cb(e, res);
             });
         });
-        
+
         this.respond<IZRemRangeByRank, number>('zremrangebyrank', (data, cb) => {
             this.client.zremrangebyrank(data.key, data.min, data.max, (e, res) => {
                 cb(e, res);
             });
         });
-        
+
         this.respond<IZRevRange, any[]>('zrevrange', (data, cb) => {
             let args: any = [
                 data.key,
@@ -406,7 +406,7 @@ class RedisWorker extends Worker implements IWorker {
                 cb(e, res);
             }]));
         });
-        
+
         this.respond<IZRem, number>('zrem', (data, cb) => {
             this.client.zrem(data.key, data.member, (e, res) => {
                 cb(e, res);
@@ -501,8 +501,8 @@ class RedisWorker extends Worker implements IWorker {
 
     private connect(cb: (e: Error) => void) {
         this.client = redis.createClient(this.redisServer.port,this.redisServer.hostname);
-        this.client.on('error', (err) => {
-            return;
+        this.client.on('error', (e) => {
+            this.inform('error', e)
         });
         if(!_.isUndefined(this.redisServer.password)){
             this.client.auth(this.redisServer.password, (e) => {
@@ -558,6 +558,9 @@ class RedisWorker extends Worker implements IWorker {
     private setSubClient() {
         if (_.isUndefined(this.subClient)) {
             this.subClient = redis.createClient(this.redisServer.port,this.redisServer.hostname);
+			this.subClient.on('error', (e) => {
+				this.inform('error', e)
+			})
             this.subClient.on('message', (channel, message) => {
                 this.inform('message-' + channel.replace(/\./g, '-'), RedisWorker.parseJsonSafe(message));
                 this.inform<ISubscriptionMessage>('message', {

@@ -453,7 +453,11 @@ var RedisWorker = (function (_super) {
         return [key];
     };
     RedisWorker.prototype.connect = function (cb) {
+        var _this = this;
         this.client = redis.createClient(this.redisServer.port, this.redisServer.hostname);
+        this.client.on('error', function (e) {
+            _this.inform('error', e);
+        });
         if (!_.isUndefined(this.redisServer.password)) {
             this.client.auth(this.redisServer.password, function (e) {
                 cb(e);
@@ -504,6 +508,9 @@ var RedisWorker = (function (_super) {
         var _this = this;
         if (_.isUndefined(this.subClient)) {
             this.subClient = redis.createClient(this.redisServer.port, this.redisServer.hostname);
+            this.subClient.on('error', function (e) {
+                _this.inform('error', e);
+            });
             this.subClient.on('message', function (channel, message) {
                 _this.inform('message-' + channel.replace(/\./g, '-'), RedisWorker.parseJsonSafe(message));
                 _this.inform('message', {
